@@ -36,6 +36,8 @@ def get_seq(ndx, ndx_windows):
             f"index {ndx-output_length+1} is out of bounds for dimension 1 with size {w}"
         )
 
+    # add comment
+
 
 def consensus_acc(seq, output, device):
     output_length, w = output.shape
