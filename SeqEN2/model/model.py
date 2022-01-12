@@ -77,8 +77,8 @@ class Model:
         if self.data["train_data"] is None:
             self.data["train_data"] = train_data
         self.data_loader = DataLoader()
-        self.data_loader.set_train_data_files(self.data["train_data"])
-        self.data_loader.set_test_data_files(self.data["test_data"])
+        self.data_loader.train_data_files = self.data["train_data"]
+        self.data_loader.test_data_files = self.data["test_data"]
 
     def train(
         self,
