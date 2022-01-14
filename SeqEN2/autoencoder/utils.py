@@ -69,7 +69,8 @@ class LayerMaker(object):
             layers.append(self.make_layer(layer))
         return Sequential(*layers)
 
-    def make_layer(self, layer):
+    @staticmethod
+    def make_layer(layer):
         if layer["type"] == "Linear":
             if "bias" in layer.keys():
                 return Linear(layer["in"], layer["out"], bias=layer["bias"])
