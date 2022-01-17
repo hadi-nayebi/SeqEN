@@ -54,12 +54,7 @@ class TrainSession:
             self.model = Model(name, arch, model_type, d0=d0, d1=d1, dn=dn, w=w)
 
     def load_data(self, dataset_name):
-        data_files = sorted(glob(str(Model.root) + f"/data/{dataset_name}/*.csv.gz"))
-        if len(data_files) < 2:
-            raise ValueError("At least two separate files are required for building a model.")
-        if self.is_testing:
-            data_files = data_files[:2]
-        self.model.load_data(dataset_name, data_files)
+        self.model.load_data(dataset_name)
 
     def load_arch(self, arch):
         arch_path = self.root / "config" / "arch" / f"{arch}.json"
