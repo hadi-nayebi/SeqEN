@@ -17,7 +17,7 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier import (
     AdversarialAutoencoderClassifier,
 )
 from SeqEN2.autoencoder.autoencoder import Autoencoder
-from SeqEN2.utils.data_loader import DataLoader, write_json
+from SeqEN2.model.data_loader import DataLoader, write_json
 
 
 class Model:
@@ -39,7 +39,6 @@ class Model:
         self.device = device("cuda" if cuda.is_available() else "cpu")
         self.autoencoder = None
         self.build_model(model_type, arch)
-        self.data = {"train_data": None, "test_data": None}
         self.data_loader = None
         self.dataset_name = None
         self.config = None
@@ -58,34 +57,22 @@ class Model:
             )
         self.autoencoder.to(self.device)
 
-    def load_data(self, dataset_name, datasets):
+    def load_data(self, dataset_name):
         """
         Loading data once for a model to make sure the training/test sets are fixed.
         :param dataset_name:
-        :param datasets:
         :return:
         """
-        if self.dataset_name is None:
-            self.dataset_name = dataset_name
         # load datafiles
-        num_files = len(datasets)
-        test_data_files = max(1, num_files // 10)
-        train_data = datasets[test_data_files:]
-        test_data = datasets[:test_data_files]
-        if self.data["test_data"] is None:
-            self.data["test_data"] = test_data
-        if self.data["train_data"] is None:
-            self.data["train_data"] = train_data
         self.data_loader = DataLoader()
-        self.data_loader.train_data_files = self.data["train_data"]
-        self.data_loader.test_data_files = self.data["test_data"]
+        self.data_loader.load_test_data(dataset_name)
+        self.data_loader.load_train_data(dataset_name)
 
     def train(
         self,
         run_title,
         epochs=10,
         batch_size=128,
-        num_test_items=1,
         test_interval=100,
         training_params=None,
         input_noise=0.0,
@@ -95,7 +82,6 @@ class Model:
         :param run_title:
         :param epochs:
         :param batch_size:
-        :param num_test_items:
         :param test_interval:
         :param training_params:
         :param input_noise:
@@ -117,7 +103,6 @@ class Model:
             print("Choose a different title for the run!")
             return
         iter_for_test = 0
-        write_json(self.data, str(train_dir / f"{run_title}_data.json"))
         for epoch in range(0, epochs):
             wandb.log({"epoch": epoch})
             for batch in self.data_loader.get_train_batch(batch_size=batch_size):
@@ -125,7 +110,7 @@ class Model:
                 iter_for_test += 1
                 if iter_for_test == test_interval:
                     iter_for_test = 0
-                    self.test(num_test_items=num_test_items)
+                    self.test()
             model_path = str(train_dir / f"epoch_{epoch}.model")
             torch_save(self.autoencoder, model_path)
             model.add_file(model_path)
@@ -141,7 +126,7 @@ class Model:
         :param num_test_items:
         :return:
         """
-        for test_batch in self.data_loader.get_test_batch(num_test_items=num_test_items):
+        for test_batch in self.data_loader.get_test_batch(batch_size=num_test_items):
             self.autoencoder.test_batch(test_batch, self.device)
 
     def overfit(
