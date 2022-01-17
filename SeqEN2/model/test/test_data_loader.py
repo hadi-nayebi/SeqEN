@@ -3,7 +3,6 @@
 
 """Unit test DataLoader."""
 
-import sys
 from unittest import TestCase
 from unittest import main as unittest_main
 

@@ -1,4 +1,5 @@
 """Define DataLoader class and related I/O functions."""
+# TODO: this will be removed, new data loader in model dir works with new data format ndx.json
 
 import gzip
 import json
