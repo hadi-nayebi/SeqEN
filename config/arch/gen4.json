@@ -1,0 +1,139 @@
+{
+        "name": "gen1",
+        "type": "AAE-classifier",
+        "vectorizer": [
+                        {
+                                "type": "Linear", 
+                                "in": 21,
+                                "out": 3
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "encoder": [
+                        {
+                                "type": "Conv1d", 
+                                "in": 3,
+                                "out": 64,
+                                "kernel": 8
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Conv1d", 
+                                "in": 64,
+                                "out": 32,
+                                "kernel": 6
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Flatten"
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 256,
+                                "out": 256
+                        },
+                        {
+                                "type": "Tanh" 
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 256,
+                                "out": 10
+                        },
+                        {
+                                "type": "Tanh" 
+                        }
+                ],
+        "decoder": [
+                        {
+                                "type": "Linear", 
+                                "in": 10,
+                                "out": 256
+                        },
+                        {
+                                "type": "ReLU" 
+                        },{
+                                "type": "Linear", 
+                                "in": 256,
+                                "out": 256
+                        },
+                        {
+                                "type": "ReLU" 
+                        },
+                        {
+                                "type": "Unflatten", 
+                                "in": 32,
+                                "out": 8
+                        },
+                        {
+                                "type": "ConvTranspose1d", 
+                                "in": 32,
+                                "out": 32,
+                                "kernel": 6
+                        },
+                        {
+                                "type": "ReLU" 
+                        },
+                        {
+                                "type": "ConvTranspose1d", 
+                                "in": 32,
+                                "out": 3,
+                                "kernel": 8
+                        },
+                        {
+                                "type": "ReLU" 
+                        }
+                ],
+        "discriminator": [
+                        {
+                                "type": "Linear", 
+                                "in": 10,
+                                "out": 128
+                        },
+                        {
+                                "type": "ReLU" 
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 128,
+                                "out": 2
+                        },
+                        {
+                                "type": "LogSoftmax" 
+                        }
+                ],
+        "devectorizer": [
+                        {
+                                "type": "Linear", 
+                                "in": 3,
+                                "out": 21
+                        },
+                        {
+                                "type": "LogSoftmax" 
+                        }
+                ],
+        "classifier": [
+                        {
+                                "type": "Linear", 
+                                "in": 10,
+                                "out": 128
+                        },
+                        {
+                                "type": "ReLU" 
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 128,
+                                "out": 2
+                        },
+                        {
+                                "type": "Softmax" 
+                        }
+                ]
+}
