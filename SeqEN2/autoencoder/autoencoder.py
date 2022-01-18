@@ -83,7 +83,7 @@ class Autoencoder(Module):
         )[0].T
         input_ndx = input_vals[:, : self.w].long()
         target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
-        target_vals = cat((target_vals, 1 - target_vals), 1)
+        target_vals = cat((target_vals, 1 - target_vals), 1).float()
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
             ndx = randperm(self.w)
