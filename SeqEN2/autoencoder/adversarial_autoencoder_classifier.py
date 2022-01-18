@@ -96,9 +96,8 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         )
         # train classifier
         self.classifier_optimizer.zero_grad()
-        classifier_target = self.target_vals.cat(1 - self.target_vals, 1)
         classifier_output = self.forward_classifier(self.one_hot_input)
-        classifier_loss = self.criterion_MSELoss(classifier_output, classifier_target)
+        classifier_loss = self.criterion_MSELoss(classifier_output, self.target_vals)
         classifier_loss.backward()
         self.classifier_optimizer.step()
         wandb.log({"classifier_loss": classifier_loss.item()})

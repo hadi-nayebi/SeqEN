@@ -6,7 +6,7 @@ __version__ = "0.0.1"
 
 
 from numpy.random import choice
-from torch import argmax
+from torch import argmax, cat
 from torch import load as torch_load
 from torch import no_grad, optim, randperm
 from torch import save as torch_save
@@ -83,6 +83,7 @@ class Autoencoder(Module):
         )[0].T
         input_ndx = input_vals[:, : self.w].long()
         target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
+        target_vals = cat((target_vals, 1 - target_vals), 1)
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
             ndx = randperm(self.w)
