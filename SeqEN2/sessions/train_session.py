@@ -27,10 +27,10 @@ class TrainSession:
         self.data_dir = self.root / "data"
         if not self.data_dir.exists():
             self.data_dir.mkdir()
-        self.arch_dir = self.root / "arch"
+        self.arch_dir = self.root / "config" / "arch"
         if not self.arch_dir.exists():
             self.arch_dir.mkdir()
-        self.train_params_dir = self.root / "train_params"
+        self.train_params_dir = self.root / "config" / "train_params"
         if not self.train_params_dir.exists():
             self.train_params_dir.mkdir()
 
