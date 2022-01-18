@@ -5,9 +5,9 @@
 # TODO: Review the code itself
 
 from argparse import ArgumentParser
-from typing import Any
+from typing import Any, Dict
 
-HelpValuePair = dict[str, Any]
+HelpValuePair = Dict[str, Any]
 
 
 class CustomArgParser(ArgumentParser):
