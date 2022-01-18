@@ -16,6 +16,7 @@ import wandb
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.seq_tools import consensus_acc
+from SeqEN2.utils.utils import get_map_location
 
 
 # class for AAE
@@ -51,10 +52,10 @@ class AdversarialAutoencoder(Autoencoder):
         super(AdversarialAutoencoder, self).save(model_dir, epoch)
         torch_save(self.discriminator, model_dir / f"discriminator_{epoch}.m")
 
-    def load(self, model_dir, version, map_location):
-        super(AdversarialAutoencoder, self).load(model_dir, version, map_location)
+    def load(self, model_dir, version):
+        super(AdversarialAutoencoder, self).load(model_dir, version)
         self.discriminator = torch_load(
-            model_dir / f"discriminator_{version}.m", map_location=map_location
+            model_dir / f"discriminator_{version}.m", map_location=get_map_location()
         )
 
     def set_training_params(self, training_params=None):
@@ -146,7 +147,7 @@ class AdversarialAutoencoder(Autoencoder):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(
+            input_ndx, _, one_hot_input = self.transform_input(
                 input_vals, device, input_noise=input_noise
             )
             (reconstructor_output, generator_output) = self.forward_test(one_hot_input)

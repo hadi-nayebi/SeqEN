@@ -13,11 +13,12 @@ from torch import save as torch_save
 from torch import sum as torch_sum
 from torch import tensor, transpose
 from torch.nn import Module, NLLLoss
-from torch.nn.functional import one_hot
+from torch.nn.functional import one_hot, unfold
 
 import wandb
 from SeqEN2.autoencoder.utils import Architecture, CustomLRScheduler, LayerMaker
 from SeqEN2.utils.seq_tools import consensus_acc
+from SeqEN2.utils.utils import get_map_location
 
 
 # class for AE
@@ -42,6 +43,7 @@ class Autoencoder(Module):
         self.criterion_NLLLoss = NLLLoss()
         # training inputs placeholders
         self.input_ndx = None
+        self.target_vals = None
         self.one_hot_input = None
 
     def forward_encoder_decoder(self, one_hot_input):
@@ -60,18 +62,27 @@ class Autoencoder(Module):
         torch_save(self.decoder, model_dir / f"decoder_{epoch}.m")
         torch_save(self.devectorizer, model_dir / f"devectorizer_{epoch}.m")
 
-    def load(self, model_dir, version, map_location):
+    def load(self, model_dir, version):
         self.vectorizer = torch_load(
-            model_dir / f"vectorizer_{version}.m", map_location=map_location
+            model_dir / f"vectorizer_{version}.m", map_location=get_map_location()
         )
-        self.encoder = torch_load(model_dir / f"encoder_{version}.m", map_location=map_location)
-        self.decoder = torch_load(model_dir / f"decoder_{version}.m", map_location=map_location)
+        self.encoder = torch_load(
+            model_dir / f"encoder_{version}.m", map_location=get_map_location()
+        )
+        self.decoder = torch_load(
+            model_dir / f"decoder_{version}.m", map_location=get_map_location()
+        )
         self.devectorizer = torch_load(
-            model_dir / f"devectorizer_{version}.m", map_location=map_location
+            model_dir / f"devectorizer_{version}.m", map_location=get_map_location()
         )
 
     def transform_input(self, input_vals, device, input_noise=0.0):
-        input_ndx = tensor(input_vals[:, : self.w], device=device).long()
+        # scans by sliding window of w
+        input_vals = unfold(
+            tensor(input_vals, device=device).T[None, None, :, :], kernel_size=(2, self.w)
+        )[0].T
+        input_ndx = input_vals[:, : self.w].long()
+        target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
             ndx = randperm(self.w)
@@ -79,9 +90,9 @@ class Autoencoder(Module):
             size[-1] = 1
             p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
             mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
-            return input_ndx, mutated_one_hot
+            return input_ndx, target_vals, mutated_one_hot
         else:
-            return input_ndx, one_hot_input
+            return input_ndx, target_vals, one_hot_input
 
     def set_training_params(self, training_params=None):
         if training_params is None:
@@ -123,7 +134,7 @@ class Autoencoder(Module):
         :return:
         """
         self.train()
-        self.input_ndx, self.one_hot_input = self.transform_input(
+        self.input_ndx, self.target_vals, self.one_hot_input = self.transform_input(
             input_vals, device, input_noise=input_noise
         )
         # train encoder_decoder
@@ -150,7 +161,7 @@ class Autoencoder(Module):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
+            input_ndx, _, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
             reconstructor_output = self.forward_test(one_hot_input)
             reconstructor_loss = self.criterion_NLLLoss(
                 reconstructor_output, input_ndx.reshape((-1,))

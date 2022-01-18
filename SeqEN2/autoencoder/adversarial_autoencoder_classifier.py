@@ -17,6 +17,7 @@ import wandb
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.seq_tools import consensus_acc
+from SeqEN2.utils.utils import get_map_location
 
 
 # class for AAE Classifier
@@ -49,10 +50,10 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         super(AdversarialAutoencoderClassifier, self).save(model_dir, epoch)
         torch_save(self.classifier, model_dir / f"classifier_{epoch}.m")
 
-    def load(self, model_dir, version, map_location):
-        super(AdversarialAutoencoderClassifier, self).load(model_dir, version, map_location)
+    def load(self, model_dir, version):
+        super(AdversarialAutoencoderClassifier, self).load(model_dir, version)
         self.classifier = torch_load(
-            model_dir / f"classifier_{version}.m", map_location=map_location
+            model_dir / f"classifier_{version}.m", map_location=get_map_location()
         )
 
     def set_training_params(self, training_params=None):
@@ -95,7 +96,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         )
         # train classifier
         self.classifier_optimizer.zero_grad()
-        classifier_target = tensor(input_vals[:, self.w :], device=device, dtype=float32)
+        classifier_target = self.target_vals.cat(1 - self.target_vals, 1)
         classifier_output = self.forward_classifier(self.one_hot_input)
         classifier_loss = self.criterion_MSELoss(classifier_output, classifier_target)
         classifier_loss.backward()
