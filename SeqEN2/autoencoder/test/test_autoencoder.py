@@ -6,10 +6,6 @@
 from unittest import TestCase
 from unittest import main as unittest_main
 
-from numpy import stack
-from torch import cat
-from torch.nn import functional as f
-
 from SeqEN2.sessions.train_session import TrainSession
 
 
