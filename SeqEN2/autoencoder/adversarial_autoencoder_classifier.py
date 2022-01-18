@@ -116,7 +116,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(
+            input_ndx, target_vals, one_hot_input = self.transform_input(
                 input_vals, device, input_noise=input_noise
             )
             (
@@ -131,8 +131,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
                 generator_output,
                 zeros((generator_output.shape[0],), device=device).long(),
             )
-            classifier_target = tensor(input_vals[:, self.w :], device=device, dtype=float32)
-            classifier_loss = self.criterion_MSELoss(classifier_output, classifier_target)
+            classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
             # reconstructor acc
             reconstructor_ndx = argmax(reconstructor_output, dim=1)
             reconstructor_accuracy = (
@@ -154,5 +153,5 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
             del classifier_output
             del reconstructor_loss
             del generator_loss
-            del classifier_target
+            del target_vals
             del classifier_loss
