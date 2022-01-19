@@ -108,41 +108,31 @@ class TestDataLoader(TestCase):
         # testing for seq:ACT_p data
         self.data_loader.load_test_data(self.DATASET_NAME_seq_ACTp, self.device)
         batch_size = 5
-        test_batch = [item for item in self.data_loader.get_test_batch(batch_size)]
+        test_batch = list(self.data_loader.get_test_batch(batch_size))
         assert len(test_batch) == batch_size, "returned wrong number of items"
 
     def test_get_train_batch(self):
         # training for seq:ACT_p data
         self.data_loader.load_train_data(self.DATASET_NAME_seq_ACTp, self.device)
         batch_num = self.SAMPLE_DATA_SIZE // self.LARGE_BATCH
-        large_batch = [
-            item for item in self.data_loader.get_train_batch(batch_size=self.LARGE_BATCH)
-        ]
+        large_batch = list(self.data_loader.get_train_batch(batch_size=self.LARGE_BATCH))
         assert len(large_batch) == batch_num, "train batch generator, wrong batch numbers"
         batch_num = self.SAMPLE_DATA_SIZE // self.SMALL_BATCH
-        small_batch = [
-            item for item in self.data_loader.get_train_batch(batch_size=self.SMALL_BATCH)
-        ]
+        small_batch = list(self.data_loader.get_train_batch(batch_size=self.SMALL_BATCH))
         assert len(small_batch) == batch_num, "train batch generator, wrong batch numbers"
         assert (
             small_batch[0].shape[0] < large_batch[0].shape[0]
         ), "train batch generator, wrong size"
         # max_size
         max_size = int(1.5 * self.SAMPLE_DATA_SIZE)
-        train_batch = [
-            item
-            for item in self.data_loader.get_train_batch(
-                batch_size=self.LARGE_BATCH, max_size=max_size
-            )
-        ]
+        train_batch = list(
+            self.data_loader.get_train_batch(batch_size=self.LARGE_BATCH, max_size=max_size)
+        )
         assert len(large_batch) < len(train_batch), "problem with max size"
         max_size = int(0.75 * self.SAMPLE_DATA_SIZE)
-        train_batch = [
-            item
-            for item in self.data_loader.get_train_batch(
-                batch_size=self.LARGE_BATCH, max_size=max_size
-            )
-        ]
+        train_batch = list(
+            self.data_loader.get_train_batch(batch_size=self.LARGE_BATCH, max_size=max_size)
+        )
         assert len(large_batch) > len(train_batch), "problem with max size"
 
 
