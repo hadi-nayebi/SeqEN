@@ -40,6 +40,7 @@ class Architecture(object):
         self.decoder = None
         self.discriminator = None
         self.classifier = None
+        self.ss_decoder = None
         self.parse_architecture()
 
     def parse_architecture(self):
@@ -56,6 +57,8 @@ class Architecture(object):
                 self.discriminator = item
             elif key == "classifier":
                 self.classifier = item
+            elif key == "ss_decoder":
+                self.ss_decoder = item
 
 
 class LayerMaker(object):
