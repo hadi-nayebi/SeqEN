@@ -27,15 +27,13 @@ class Model:
 
     root = Path(dirname(__file__)).parent.parent
 
-    def __init__(self, name, arch, model_type, d0=21, d1=8, dn=10, w=20):
+    def __init__(self, name, arch, model_type, d1=8, dn=10, w=20):
         self.name = name
         self.path = self.root / "models" / f"{self.name}"
         self.versions_path = self.path / "versions"
-        self.d0 = d0
         self.d1 = d1
         self.dn = dn
         self.w = w
-        self.aa_keys = "WYFMILVAGPSTCEDQNHRK*"
         self.device = device("cuda" if cuda.is_available() else "cpu")
         self.autoencoder = None
         self.build_model(model_type, arch)
@@ -48,13 +46,11 @@ class Model:
 
     def build_model(self, model_type, arch):
         if model_type == "AE":
-            self.autoencoder = Autoencoder(self.d0, self.d1, self.dn, self.w, arch)
+            self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch)
         elif model_type == "AAE":
-            self.autoencoder = AdversarialAutoencoder(self.d0, self.d1, self.dn, self.w, arch)
+            self.autoencoder = AdversarialAutoencoder(self.d1, self.dn, self.w, arch)
         elif model_type == "AAEC":
-            self.autoencoder = AdversarialAutoencoderClassifier(
-                self.d0, self.d1, self.dn, self.w, arch
-            )
+            self.autoencoder = AdversarialAutoencoderClassifier(self.d1, self.dn, self.w, arch)
         self.autoencoder.to(self.device)
 
     def load_data(self, dataset_name):

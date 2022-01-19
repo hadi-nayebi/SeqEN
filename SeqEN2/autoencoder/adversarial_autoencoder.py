@@ -21,8 +21,8 @@ from SeqEN2.utils.utils import get_map_location
 
 # class for AAE
 class AdversarialAutoencoder(Autoencoder):
-    def __init__(self, d0, d1, dn, w, arch):
-        super(AdversarialAutoencoder, self).__init__(d0, d1, dn, w, arch)
+    def __init__(self, d1, dn, w, arch):
+        super(AdversarialAutoencoder, self).__init__(d1, dn, w, arch)
         self.discriminator = LayerMaker().make(self.arch.discriminator)
         # define customized optimizers
         self.generator_optimizer = None

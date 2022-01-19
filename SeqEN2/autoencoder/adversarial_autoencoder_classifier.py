@@ -5,12 +5,12 @@
 __version__ = "0.0.1"
 
 
-from torch import argmax, float32
+from torch import argmax
 from torch import load as torch_load
 from torch import no_grad, optim
 from torch import save as torch_save
 from torch import sum as torch_sum
-from torch import tensor, transpose, zeros
+from torch import transpose, zeros
 from torch.nn import MSELoss
 
 import wandb
@@ -22,8 +22,8 @@ from SeqEN2.utils.utils import get_map_location
 
 # class for AAE Classifier
 class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
-    def __init__(self, d0, d1, dn, w, arch):
-        super(AdversarialAutoencoderClassifier, self).__init__(d0, d1, dn, w, arch)
+    def __init__(self, d1, dn, w, arch):
+        super(AdversarialAutoencoderClassifier, self).__init__(d1, dn, w, arch)
         self.classifier = LayerMaker().make(self.arch.classifier)
         # define customized optimizers
         self.classifier_optimizer = None

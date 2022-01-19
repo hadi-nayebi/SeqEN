@@ -23,9 +23,12 @@ from SeqEN2.utils.utils import get_map_location
 
 # class for AE
 class Autoencoder(Module):
-    def __init__(self, d0, d1, dn, w, arch):
+
+    aa_keys = "WYFMILVAGPSTCEDQNHRK*"  # amino acids class labels
+    d0 = 21  # amino acids class size
+
+    def __init__(self, d1, dn, w, arch):
         super(Autoencoder, self).__init__()
-        self.d0 = d0
         self.d1 = d1
         self.dn = dn
         self.w = w

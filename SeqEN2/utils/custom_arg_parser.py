@@ -51,8 +51,7 @@ class TrainSessionArgParser(DefaultParser):
         self.parser.add_argument("-rt", "--run_title", type=str, help="Run Title", required=True)
         self.parser.add_argument("-d", "--dataset", type=str, help="Dataset", required=True)
         self.parser.add_argument("-a", "--arch", type=str, help="Arch", required=True)
-        # add one argument for test train split
-        self.parser.add_argument("-d0", "--d0", type=int, help="D0", default=21)
+        # madel hyper params, d1: amino acids vec, dn: embedding, w: sliding window
         self.parser.add_argument("-d1", "--d1", type=int, help="D1", default=8)
         self.parser.add_argument("-dn", "--dn", type=int, help="Dn", default=10)
         self.parser.add_argument("-w", "--w", type=int, help="W", default=20)

@@ -37,10 +37,10 @@ class TrainSession:
         # model placeholder
         self.model = None
 
-    def add_model(self, name, arch, model_type, d0=21, d1=8, dn=10, w=20):
+    def add_model(self, name, arch, model_type, d1=8, dn=10, w=20):
         arch = self.load_arch(arch)
         if self.model is None:
-            self.model = Model(name, arch, model_type, d0=d0, d1=d1, dn=dn, w=w)
+            self.model = Model(name, arch, model_type, d1=d1, dn=dn, w=w)
 
     def load_data(self, dataset_name):
         self.model.load_data(dataset_name)
@@ -97,7 +97,6 @@ def main(args):
         args["Model Name"],
         args["Arch"],
         args["Model Type"],
-        d0=args["D0"],
         d1=args["D1"],
         dn=args["Dn"],
         w=args["W"],
