@@ -6,7 +6,9 @@ from os.path import dirname
 from pathlib import Path
 from typing import Any
 
-from numpy import array, concatenate, int8, ndarray
+from numpy import array, ndarray
+from numpy.random import randint
+from torch import cat, tensor
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -65,13 +67,22 @@ def write_json(data_dict, filename, encoder=None) -> None:
         raise IOError("File format must be .gz or .json.gz")
 
 
-def join(items) -> ndarray:
-    return concatenate(items, axis=0)
+def join(items) -> tensor:
+    return cat(items, 0)
 
 
-def to_array(data) -> ndarray:
-    output = array(data["ndx"]).reshape((-1, 1))
-    return concatenate([output, array(data["ACT_p"]).reshape((-1, 1))], axis=1)
+def to_tensor(data, key, device) -> tensor:
+    output = None
+    metadata = {"name": key}
+    for i, (key, value) in enumerate(data.items()):
+        if output is None:
+            output = tensor(value, device=device).reshape((-1, 1))
+            metadata[f"{i}"] = {"name": key, "shape": len(value)}
+        else:
+            output = cat((output, tensor(value, device=device).reshape((-1, 1))), 1)
+            metadata[f"{i}"] = {"name": key, "shape": len(value)}
+    assert output is not None
+    return output, metadata
 
 
 class DataLoader(object):
@@ -82,6 +93,7 @@ class DataLoader(object):
     def __init__(self) -> None:
         self._train_data = None
         self._test_data = None
+        self.test_data_keys = None
 
     @property
     def train_data(self) -> dict:
@@ -91,29 +103,34 @@ class DataLoader(object):
     def test_data(self) -> dict:
         return self._test_data
 
-    def load_test_data(self, dataset) -> None:
+    def load_test_data(self, dataset, device) -> None:
         filename = self.root / "data" / f"{dataset}_test.json.gz"
         self._test_data = read_json(str(filename))
-        # to numpy array
+        # to tensor, metadata
         for key in self._test_data.keys():
-            self._test_data[key] = to_array(self._test_data[key])
+            self._test_data[key] = to_tensor(self._test_data[key], key, device)
+        self.test_data_keys = list(self._test_data.keys())
 
-    def load_train_data(self, dataset) -> None:
+    def load_train_data(self, dataset, device) -> None:
         filename = self.root / "data" / f"{dataset}_train.json.gz"
         self._train_data = read_json(str(filename))
-        # to numpy array
+        # to tensor, metadata
         for key in self._train_data.keys():
-            self._train_data[key] = to_array(self._train_data[key])
+            self._train_data[key] = to_tensor(self._train_data[key], key, device=device)
 
-    def get_train_batch(self, batch_size=128) -> array:
+    def get_train_batch(self, batch_size=128, max_size=None) -> array:
         num_batch = len(self._train_data) // batch_size
+        if max_size is not None:
+            assert max_size < len(self._test_data), "size is bigger that test data items."
+            num_batch = max_size // batch_size
         keys = list(self._train_data.keys())
         for i in range(num_batch + 1):
-            batch = join(
-                [self._train_data[key] for key in keys[i * batch_size : (i + 1) * batch_size]]
+            yield join(
+                [self._train_data[key][0] for key in keys[i * batch_size : (i + 1) * batch_size]]
             )
-            yield batch
 
-    def get_test_batch(self, batch_size=1) -> array:
-        for key in list(self._test_data.keys())[:batch_size]:
+    def get_test_batch(self, batch_size=1) -> (tensor, dict):
+        ndx = randint(0, len(self.test_data_keys), batch_size)
+        for i in ndx:
+            key = self.test_data_keys[i]
             yield self._test_data[key]
