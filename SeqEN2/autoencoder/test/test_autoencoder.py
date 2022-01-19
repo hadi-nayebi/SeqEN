@@ -14,10 +14,10 @@ class TestAutoencoder(TestCase):
 
     initialized = False
 
-    def initialize(self, model_type="AE", gen="gen3", d0=21, d1=8, dn=10, w=20):
+    def initialize(self, model_type="AE", gen="gen3", d1=8, dn=10, w=20):
         if not self.initialized:
             self.train_session = TrainSession()
-            self.train_session.add_model("dummy", gen, model_type, d0=d0, d1=d1, dn=dn, w=w)
+            self.train_session.add_model("dummy", gen, model_type, d1=d1, dn=dn, w=w)
             dataset_name = "KeggSeq_ndx_wpACT_100"
             self.train_session.load_data(dataset_name)
             self.initialized = True
