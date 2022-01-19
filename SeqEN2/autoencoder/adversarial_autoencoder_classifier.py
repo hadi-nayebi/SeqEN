@@ -4,14 +4,15 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
-
-from torch import argmax
+from numpy.random import choice
+from torch import argmax, cat
 from torch import load as torch_load
-from torch import no_grad, optim
+from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
-from torch import transpose, zeros
+from torch import tensor, transpose, zeros
 from torch.nn import MSELoss
+from torch.nn.functional import one_hot, unfold
 
 import wandb
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
@@ -83,6 +84,25 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
             min_lr=self.training_params["classifier"]["min_lr"],
         )
 
+    def transform_input(self, input_vals, device, input_noise=0.0):
+        # scans by sliding window of w
+        input_vals = unfold(
+            tensor(input_vals, device=device).T[None, None, :, :], kernel_size=(2, self.w)
+        )[0].T
+        input_ndx = input_vals[:, : self.w].long()
+        target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
+        target_vals = cat((target_vals, 1 - target_vals), 1).float()
+        one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
+        if input_noise > 0.0:
+            ndx = randperm(self.w)
+            size = list(one_hot_input.shape)
+            size[-1] = 1
+            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
+            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
+            return input_ndx, target_vals, mutated_one_hot
+        else:
+            return input_ndx, target_vals, one_hot_input
+
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -91,9 +111,50 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         :param input_noise:
         :return:
         """
-        super(AdversarialAutoencoderClassifier, self).train_batch(
+        self.train()
+        self.input_ndx, self.target_vals, self.one_hot_input = self.transform_input(
             input_vals, device, input_noise=input_noise
         )
+        # train encoder_decoder
+        self.reconstructor_optimizer.zero_grad()
+        reconstructor_output = self.forward_encoder_decoder(self.one_hot_input)
+        reconstructor_loss = self.criterion_NLLLoss(
+            reconstructor_output, self.input_ndx.reshape((-1,))
+        )
+        reconstructor_loss.backward()
+        self.reconstructor_optimizer.step()
+        wandb.log({"reconstructor_loss": reconstructor_loss.item()})
+        wandb.log({"reconstructor_LR": self.reconstructor_lr_scheduler.get_last_lr()})
+        self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
+        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        # train generator
+        self.generator_optimizer.zero_grad()
+        generator_output = self.forward_generator(self.one_hot_input)
+        generator_loss = self.criterion_NLLLoss(
+            generator_output,
+            zeros((generator_output.shape[0],), device=device).long(),
+        )
+        generator_loss.backward()
+        self.generator_optimizer.step()
+        wandb.log({"generator_loss": generator_loss.item()})
+        wandb.log({"generator_LR": self.generator_lr_scheduler.get_last_lr()})
+        self.training_params["generator"]["lr"] = self.generator_lr_scheduler.get_last_lr()
+        # train discriminator
+        self.discriminator_optimizer.zero_grad()
+        ndx = randperm(self.w)
+        discriminator_output = self.forward_discriminator(self.one_hot_input[:, ndx, :])
+        discriminator_loss = self.criterion_NLLLoss(
+            discriminator_output,
+            ones((discriminator_output.shape[0],), device=device).long(),
+        )
+        discriminator_loss.backward()
+        self.discriminator_optimizer.step()
+        wandb.log({"discriminator_loss": discriminator_loss.item()})
+        wandb.log({"discriminator_LR": self.discriminator_lr_scheduler.get_last_lr()})
+        self.training_params["discriminator"]["lr"] = self.discriminator_lr_scheduler.get_last_lr()
+        gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
+        self.generator_lr_scheduler.step(gen_disc_loss)
+        self.discriminator_lr_scheduler.step(gen_disc_loss)
         # train classifier
         self.classifier_optimizer.zero_grad()
         classifier_output = self.forward_classifier(self.one_hot_input)
@@ -105,6 +166,12 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         self.training_params["classifier"]["lr"] = self.classifier_lr_scheduler.get_last_lr()
         self.classifier_lr_scheduler.step(classifier_loss.item())
         # clean up
+        del reconstructor_loss
+        del reconstructor_output
+        del generator_output
+        del generator_loss
+        del discriminator_output
+        del discriminator_loss
         del classifier_output
         del classifier_loss
 
