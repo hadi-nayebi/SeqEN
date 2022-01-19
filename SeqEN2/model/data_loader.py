@@ -6,8 +6,8 @@ from os.path import dirname
 from pathlib import Path
 from typing import Any
 
-from numpy import array, ndarray
-from numpy.random import randint
+from numpy import array, concatenate, ndarray
+from numpy.random import permutation, randint
 from torch import cat, tensor
 
 
@@ -116,15 +116,18 @@ class DataLoader(object):
         self._train_data = read_json(str(filename))
         # to tensor, metadata
         for key in self._train_data.keys():
-            self._train_data[key] = to_tensor(self._train_data[key], key, device=device)
+            self._train_data[key] = to_tensor(self._train_data[key], key, device)
 
     def get_train_batch(self, batch_size=128, max_size=None) -> array:
-        num_batch = len(self._train_data) // batch_size
+        keys = permutation(list(self._train_data.keys()))
+        keys_len = len(keys)
+        num_batch = keys_len // batch_size
         if max_size is not None:
-            assert max_size < len(self._test_data), "size is bigger that test data items."
             num_batch = max_size // batch_size
-        keys = list(self._train_data.keys())
-        for i in range(num_batch + 1):
+            if max_size > keys_len:
+                repeat_data_fold = (max_size // keys_len) + 1
+                keys = concatenate([keys] * repeat_data_fold, axis=0)
+        for i in range(num_batch):
             yield join(
                 [self._train_data[key][0] for key in keys[i * batch_size : (i + 1) * batch_size]]
             )
