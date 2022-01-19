@@ -49,7 +49,11 @@ class TrainSessionArgParser(DefaultParser):
     def _initialize(self) -> None:
         self.parser.add_argument("-n", "--model", type=str, help="Model Name", required=True)
         self.parser.add_argument("-rt", "--run_title", type=str, help="Run Title", required=True)
-        self.parser.add_argument("-d", "--dataset", type=str, help="Dataset", required=True)
+        # dataset0: seq:act_p, dataset1: seq:ss, dataset2: seq:act_p:ss
+        self.parser.add_argument("-d0", "--dataset0", type=str, help="Dataset0", required=True)
+        self.parser.add_argument("-d1", "--dataset1", type=str, help="Dataset1", default="")
+        self.parser.add_argument("-d2", "--dataset2", type=str, help="Dataset2", default="")
+        # architecture blueprint
         self.parser.add_argument("-a", "--arch", type=str, help="Arch", required=True)
         # madel hyper params, d1: amino acids vec, dn: embedding, w: sliding window
         self.parser.add_argument("-d1", "--d1", type=int, help="D1", default=8)
