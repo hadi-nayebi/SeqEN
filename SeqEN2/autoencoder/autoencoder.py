@@ -139,6 +139,7 @@ class Autoencoder(Module):
         print(f"device at the start of train_batch {input_vals.device}")
         self.train()
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
+        print(f"device at one_hot_input {one_hot_input.device}")
         # train encoder_decoder
         self.reconstructor_optimizer.zero_grad()
         reconstructor_output = self.forward_encoder_decoder(one_hot_input)
