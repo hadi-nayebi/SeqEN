@@ -69,7 +69,6 @@ def write_json(data_dict, filename, encoder=None) -> None:
 
 def join(items) -> tensor:
     output = cat(items, 0)
-    print(f"device at the end of join {output.device}")
     return output
 
 
@@ -84,7 +83,6 @@ def to_tensor(data, key, device) -> tensor:
             output = cat((output, tensor(value, device=device).reshape((-1, 1))), 1)
             metadata[f"{i}"] = {"name": key, "shape": len(value)}
     assert output is not None
-    print(f"device at the end of to_tensor {output.device}")
     return output, metadata
 
 
