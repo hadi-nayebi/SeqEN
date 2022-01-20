@@ -50,6 +50,7 @@ class Autoencoder(Module):
         self.criterion_NLLLoss = NLLLoss()
 
     def forward_encoder_decoder(self, one_hot_input):
+        print(self.vectorizer.device)
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
