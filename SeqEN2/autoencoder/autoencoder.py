@@ -136,6 +136,7 @@ class Autoencoder(Module):
         :param input_noise:
         :return:
         """
+        print(f"device at the start of train_batch {input_vals.device}")
         self.train()
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
         # train encoder_decoder
@@ -161,6 +162,7 @@ class Autoencoder(Module):
         :param input_vals:
         :return:
         """
+        print(f"device at the start of train_batch {input_vals.device}")
         self.eval()
         with no_grad():
             input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
