@@ -122,7 +122,7 @@ class TestAutoencoder(TestCase):
         # train batch returns data without any metadata
         self.autoencoder.initialize_for_training()
         input_vals = {"cl": self.train_batch_cl, "ss": self.train_batch_ss}
-        self.autoencoder.train_batch(input_vals, self.device, wandb_log=False)
+        self.autoencoder.train_batch(input_vals, self.device)
 
 
 if __name__ == "__main__":
