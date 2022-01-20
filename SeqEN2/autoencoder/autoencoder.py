@@ -8,7 +8,7 @@ __version__ = "0.0.1"
 from typing import Dict
 
 from numpy.random import choice
-from torch import argmax, cat
+from torch import Tensor, argmax
 from torch import load as torch_load
 from torch import no_grad, optim, randperm
 from torch import save as torch_save
@@ -18,7 +18,7 @@ from torch.nn import Module, NLLLoss
 from torch.nn.functional import one_hot, unfold
 
 import wandb
-from SeqEN2.autoencoder.utils import Architecture, CustomLRScheduler, LayerMaker
+from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
@@ -114,9 +114,10 @@ class Autoencoder(Module):
         self.set_training_params(training_params=training_params)
         self.initialize_training_components()
 
-    def transform_input(self, input_vals, device, input_noise=0.0):
+    def transform_input(self, input_vals, device, ks=2, input_noise=0.0):
         # scans by sliding window of w
-        input_vals = unfold(input_vals[0].T[None, None, :, :], kernel_size=(2, self.w))[0].T
+        assert isinstance(input_vals, Tensor)
+        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=(ks, self.w))[0].T
         input_ndx = input_vals[:, : self.w].long()
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:

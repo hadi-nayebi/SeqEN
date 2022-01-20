@@ -5,7 +5,7 @@
 __version__ = "0.0.1"
 
 from numpy.random import choice
-from torch import argmax, cat
+from torch import Tensor, argmax, cat
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
@@ -97,10 +97,11 @@ class AdversarialAutoencoder(Autoencoder):
             min_lr=self.training_params["discriminator"]["min_lr"],
         )
 
-    def transform_input(self, input_vals, device, input_noise=0.0):
+    def transform_input(self, input_vals, device, ks=2, input_noise=0.0):
         # scans by sliding window of w
+        assert isinstance(input_vals, Tensor)
         input_vals = unfold(
-            tensor(input_vals, device=device).T[None, None, :, :], kernel_size=(2, self.w)
+            tensor(input_vals, device=device).T[None, None, :, :], kernel_size=(ks, self.w)
         )[0].T
         input_ndx = input_vals[:, : self.w].long()
         target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))

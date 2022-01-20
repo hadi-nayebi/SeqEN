@@ -42,7 +42,7 @@ class TestAutoencoder(TestCase):
         cls.test_batch = cls.data_loader.get_test_by_key(cls.TEST_KEY)
 
     def test_transform_input(self):
-        input_ndx, one_hot_input = self.autoencoder.transform_input(self.test_batch, self.device)
+        input_ndx, one_hot_input = self.autoencoder.transform_input(self.test_batch[0], self.device)
         self.assertEqual(
             self.test_batch[0].shape[0] - self.w + 1,
             input_ndx.shape[0],
@@ -55,7 +55,7 @@ class TestAutoencoder(TestCase):
         )
 
     def test_forward(self):
-        input_ndx, one_hot_input = self.autoencoder.transform_input(self.test_batch, self.device)
+        input_ndx, one_hot_input = self.autoencoder.transform_input(self.test_batch[0], self.device)
         devectorized = self.autoencoder.forward_test(one_hot_input)
         self.assertEqual(
             self.autoencoder.d0, devectorized.shape[1], "output.shape[1] do not match d0"
