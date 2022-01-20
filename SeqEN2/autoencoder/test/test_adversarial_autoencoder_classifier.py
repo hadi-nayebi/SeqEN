@@ -119,8 +119,3 @@ class TestAutoencoder(TestCase):
 
 if __name__ == "__main__":
     unittest_main()
-
-
-# assert target_vals.shape[0] == input_ndx.shape[0]
-#         assert target_vals.shape[1] == 2
-#         assert target_vals.shape[0] == one_hot_input.shape[0]
