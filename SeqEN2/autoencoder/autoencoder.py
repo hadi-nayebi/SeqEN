@@ -48,6 +48,8 @@ class Autoencoder(Module):
         self.reconstructor_lr_scheduler = None
         # Loss functions
         self.criterion_NLLLoss = NLLLoss()
+        # logger
+        self.logs = {}
 
     def forward_encoder_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -128,7 +130,16 @@ class Autoencoder(Module):
         else:
             return input_ndx, one_hot_input
 
-    def train_batch(self, input_vals, device, input_noise=0.0, wandb_log=True):
+    def log(self, key, value):
+        if key in self.logs.keys():
+            self.logs[key].append(value)
+        else:
+            self.logs[key] = [value]
+
+    def reset_log(self):
+        self.logs = {}
+
+    def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
         :param input_vals:
@@ -144,9 +155,8 @@ class Autoencoder(Module):
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
         reconstructor_loss.backward()
         self.reconstructor_optimizer.step()
-        if wandb_log:
-            wandb.log({"reconstructor_loss": reconstructor_loss.item()})
-            wandb.log({"reconstructor_LR": self.reconstructor_lr_scheduler.get_last_lr()})
+        self.log("reconstructor_loss", reconstructor_loss.item())
+        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # clean up
@@ -155,7 +165,7 @@ class Autoencoder(Module):
         del reconstructor_loss
         del reconstructor_output
 
-    def test_batch(self, input_vals, device, wandb_log=True):
+    def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_vals:
@@ -178,10 +188,9 @@ class Autoencoder(Module):
                 input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
             )
             # reconstruction_loss, discriminator_loss, classifier_loss
-            if wandb_log:
-                wandb.log({"test_reconstructor_loss": reconstructor_loss.item()})
-                wandb.log({"test_reconstructor_accuracy": reconstructor_accuracy.item()})
-                wandb.log({"test_consensus_accuracy": consensus_seq_acc})
+            self.log("test_reconstructor_loss", reconstructor_loss.item())
+            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
+            self.log("test_consensus_accuracy", consensus_seq_acc)
             # clean up
             del input_ndx
             del one_hot_input
