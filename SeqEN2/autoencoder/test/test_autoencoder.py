@@ -36,13 +36,16 @@ class TestAutoencoder(TestCase):
         cls.autoencoder = Autoencoder(cls.d1, cls.dn, cls.w, arch)
         cls.data_loader = DataLoader()
         cls.data_loader.load_test_data(cls.DATASET_NAME_seq_ACTp, cls.device)
-        # random sample
-        # cls.test_batch = list(cls.data_loader.get_test_batch(batch_size=1))[0]
-        # fixed sample
+        cls.data_loader.load_train_data(cls.DATASET_NAME_seq_ACTp, cls.device)
+        # random train sample
+        cls.train_batch = list(cls.data_loader.get_train_batch(batch_size=10))[0]
+        # fixed test sample
         cls.test_batch = cls.data_loader.get_test_by_key(cls.TEST_KEY)
 
     def test_transform_input(self):
-        input_ndx, one_hot_input = self.autoencoder.transform_input(self.test_batch[0], self.device)
+        # test batch returns a tuple (data, metadata)
+        input_vals = self.test_batch[0]
+        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
         self.assertEqual(
             self.test_batch[0].shape[0] - self.w + 1,
             input_ndx.shape[0],
@@ -53,9 +56,31 @@ class TestAutoencoder(TestCase):
         self.assertEqual(
             self.autoencoder.d0, one_hot_input.shape[2], "one_hot.shape[1] do not match d0"
         )
+        # train batch returns data without any metadata
+        input_vals = self.train_batch
+        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
+        self.assertEqual(
+            self.train_batch.shape[0] - self.w + 1,
+            input_ndx.shape[0],
+            "input_ndx.shape[0] do not match batch.shape[0]",
+        )
+        self.assertEqual(self.w, input_ndx.shape[1], "input_ndx.shape[0] do not match w")
+        self.assertEqual(self.w, one_hot_input.shape[1], "one_hot.shape[0] do not match w")
+        self.assertEqual(
+            self.autoencoder.d0, one_hot_input.shape[2], "one_hot.shape[1] do not match d0"
+        )
 
     def test_forward(self):
-        input_ndx, one_hot_input = self.autoencoder.transform_input(self.test_batch[0], self.device)
+        # test batch returns a tuple (data, metadata)
+        input_vals = self.test_batch[0]
+        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
+        devectorized = self.autoencoder.forward_test(one_hot_input)
+        self.assertEqual(
+            self.autoencoder.d0, devectorized.shape[1], "output.shape[1] do not match d0"
+        )
+        # train batch returns data without any metadata
+        input_vals = self.train_batch
+        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
         devectorized = self.autoencoder.forward_test(one_hot_input)
         self.assertEqual(
             self.autoencoder.d0, devectorized.shape[1], "output.shape[1] do not match d0"
