@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Unit test Model."""
+"""Unit test AE."""
 
 from os.path import dirname
 from pathlib import Path
@@ -16,7 +16,7 @@ from SeqEN2.model.data_loader import DataLoader, read_json
 
 
 class TestAutoencoder(TestCase):
-    """Test items for Autoencoder class"""
+    """Test items for AE class"""
 
     root = Path(dirname(__file__)).parent.parent.parent
     device = device("cuda" if cuda.is_available() else "cpu")
