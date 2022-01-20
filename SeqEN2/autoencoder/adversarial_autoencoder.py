@@ -22,6 +22,7 @@ from SeqEN2.utils.utils import get_map_location
 class AdversarialAutoencoder(Autoencoder):
     def __init__(self, d1, dn, w, arch):
         super(AdversarialAutoencoder, self).__init__(d1, dn, w, arch)
+        assert self.arch.discriminator is not None, "arch missing discriminator."
         self.discriminator = LayerMaker().make(self.arch.discriminator)
         # define customized optimizers
         self.generator_optimizer = None
@@ -95,7 +96,7 @@ class AdversarialAutoencoder(Autoencoder):
             min_lr=self.training_params["discriminator"]["min_lr"],
         )
 
-    def train_batch(self, input_vals, device, input_noise=0.0):
+    def train_batch(self, input_vals, device, input_noise=0.0, wandb_log=True):
         """
         Training for one batch of data, this will move into autoencoder module
         :param input_vals:
@@ -104,50 +105,51 @@ class AdversarialAutoencoder(Autoencoder):
         :return:
         """
         self.train()
-        self.input_ndx, self.target_vals, self.one_hot_input = self.transform_input(
-            input_vals, device, input_noise=input_noise
-        )
+        input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
         # train encoder_decoder
         self.reconstructor_optimizer.zero_grad()
-        reconstructor_output = self.forward_encoder_decoder(self.one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(
-            reconstructor_output, self.input_ndx.reshape((-1,))
-        )
+        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
+        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
         reconstructor_loss.backward()
         self.reconstructor_optimizer.step()
-        wandb.log({"reconstructor_loss": reconstructor_loss.item()})
-        wandb.log({"reconstructor_LR": self.reconstructor_lr_scheduler.get_last_lr()})
+        if wandb_log:
+            wandb.log({"reconstructor_loss": reconstructor_loss.item()})
+            wandb.log({"reconstructor_LR": self.reconstructor_lr_scheduler.get_last_lr()})
         self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # train generator
         self.generator_optimizer.zero_grad()
-        generator_output = self.forward_generator(self.one_hot_input)
+        generator_output = self.forward_generator(one_hot_input)
         generator_loss = self.criterion_NLLLoss(
             generator_output,
             zeros((generator_output.shape[0],), device=device).long(),
         )
         generator_loss.backward()
         self.generator_optimizer.step()
-        wandb.log({"generator_loss": generator_loss.item()})
-        wandb.log({"generator_LR": self.generator_lr_scheduler.get_last_lr()})
+        if wandb_log:
+            wandb.log({"generator_loss": generator_loss.item()})
+            wandb.log({"generator_LR": self.generator_lr_scheduler.get_last_lr()})
         self.training_params["generator"]["lr"] = self.generator_lr_scheduler.get_last_lr()
         # train discriminator
         self.discriminator_optimizer.zero_grad()
         ndx = randperm(self.w)
-        discriminator_output = self.forward_discriminator(self.one_hot_input[:, ndx, :])
+        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
         discriminator_loss = self.criterion_NLLLoss(
             discriminator_output,
             ones((discriminator_output.shape[0],), device=device).long(),
         )
         discriminator_loss.backward()
         self.discriminator_optimizer.step()
-        wandb.log({"discriminator_loss": discriminator_loss.item()})
-        wandb.log({"discriminator_LR": self.discriminator_lr_scheduler.get_last_lr()})
+        if wandb_log:
+            wandb.log({"discriminator_loss": discriminator_loss.item()})
+            wandb.log({"discriminator_LR": self.discriminator_lr_scheduler.get_last_lr()})
         self.training_params["discriminator"]["lr"] = self.discriminator_lr_scheduler.get_last_lr()
         gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
         self.generator_lr_scheduler.step(gen_disc_loss)
         self.discriminator_lr_scheduler.step(gen_disc_loss)
         # clean up
+        del input_ndx
+        del one_hot_input
         del reconstructor_loss
         del reconstructor_output
         del generator_output
@@ -155,7 +157,7 @@ class AdversarialAutoencoder(Autoencoder):
         del discriminator_output
         del discriminator_loss
 
-    def test_batch(self, input_vals, device, input_noise=0.0):
+    def test_batch(self, input_vals, device, input_noise=0.0, wandb_log=True):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_vals:
@@ -163,7 +165,7 @@ class AdversarialAutoencoder(Autoencoder):
         """
         self.eval()
         with no_grad():
-            input_ndx, _, one_hot_input = self.transform_input(
+            input_ndx, one_hot_input = self.transform_input(
                 input_vals, device, input_noise=input_noise
             )
             (reconstructor_output, generator_output) = self.forward_test(one_hot_input)
@@ -184,11 +186,14 @@ class AdversarialAutoencoder(Autoencoder):
                 input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
             )
             # reconstruction_loss, discriminator_loss, classifier_loss
-            wandb.log({"test_reconstructor_loss": reconstructor_loss.item()})
-            wandb.log({"test_generator_loss": generator_loss.item()})
-            wandb.log({"test_reconstructor_accuracy": reconstructor_accuracy.item()})
-            wandb.log({"test_consensus_accuracy": consensus_seq_acc})
+            if wandb_log:
+                wandb.log({"test_reconstructor_loss": reconstructor_loss.item()})
+                wandb.log({"test_generator_loss": generator_loss.item()})
+                wandb.log({"test_reconstructor_accuracy": reconstructor_accuracy.item()})
+                wandb.log({"test_consensus_accuracy": consensus_seq_acc})
             # clean up
+            del input_ndx
+            del one_hot_input
             del reconstructor_output
             del generator_output
             del reconstructor_loss

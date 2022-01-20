@@ -36,6 +36,9 @@ class TestAdversarialAutoencoder(TestCase):
         cls.autoencoder = AdversarialAutoencoder(cls.d1, cls.dn, cls.w, arch)
         cls.data_loader = DataLoader()
         cls.data_loader.load_test_data(cls.DATASET_NAME_seq_ACTp, cls.device)
+        cls.data_loader.load_train_data(cls.DATASET_NAME_seq_ACTp, cls.device)
+        # random train sample
+        cls.train_batch = list(cls.data_loader.get_train_batch(batch_size=10))[0]
         # fixed test sample
         cls.test_batch = cls.data_loader.get_test_by_key(cls.TEST_KEY)
 
@@ -48,6 +51,12 @@ class TestAdversarialAutoencoder(TestCase):
             self.autoencoder.d0, devectorized.shape[1], "output1.shape[1] do not match d0"
         )
         self.assertEqual(2, discriminator_output.shape[1], "output2.shape[1] do not match two")
+
+    def test_train_batch(self):
+        # train batch returns data without any metadata
+        self.autoencoder.initialize_for_training()
+        input_vals = self.train_batch
+        self.autoencoder.train_batch(input_vals, self.device, wandb_log=False)
 
 
 if __name__ == "__main__":
