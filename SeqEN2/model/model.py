@@ -16,6 +16,9 @@ from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.adversarial_autoencoder_classifier import (
     AdversarialAutoencoderClassifier,
 )
+from SeqEN2.autoencoder.adversarial_autoencoder_classifier_ss_decoder import (
+    AdversarialAutoencoderClassifierSSDecoder,
+)
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.model.data_loader import DataLoader, write_json
 
@@ -45,12 +48,17 @@ class Model:
             self.versions_path.mkdir()
 
     def build_model(self, model_type, arch):
-        if model_type == "AE":
+        assert model_type == arch.type, "madel type argument do not match arch.type"
+        if arch.type == "AE":
             self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch)
-        elif model_type == "AAE":
+        elif arch.type == "AAE":
             self.autoencoder = AdversarialAutoencoder(self.d1, self.dn, self.w, arch)
-        elif model_type == "AAEC":
+        elif arch.type == "AAEC":
             self.autoencoder = AdversarialAutoencoderClassifier(self.d1, self.dn, self.w, arch)
+        elif arch.type == "AAECSS":
+            self.autoencoder = AdversarialAutoencoderClassifierSSDecoder(
+                self.d1, self.dn, self.w, arch
+            )
         self.autoencoder.to(self.device)
 
     def load_data(self, dataset_name):
