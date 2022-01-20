@@ -78,13 +78,12 @@ class TestAutoencoder(TestCase):
         self.assertEqual(
             self.autoencoder.d0, devectorized.shape[1], "output.shape[1] do not match d0"
         )
+
+    def test_train_batch(self):
         # train batch returns data without any metadata
+        self.autoencoder.initialize_for_training()
         input_vals = self.train_batch
-        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
-        devectorized = self.autoencoder.forward_test(one_hot_input)
-        self.assertEqual(
-            self.autoencoder.d0, devectorized.shape[1], "output.shape[1] do not match d0"
-        )
+        self.autoencoder.train_batch(input_vals, self.device, wandb_log=False)
 
 
 if __name__ == "__main__":
