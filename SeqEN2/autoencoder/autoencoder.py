@@ -114,10 +114,11 @@ class Autoencoder(Module):
         self.set_training_params(training_params=training_params)
         self.initialize_training_components()
 
-    def transform_input(self, input_vals, device, ks=2, input_noise=0.0):
+    def transform_input(self, input_vals, device, input_noise=0.0):
         # scans by sliding window of w
         assert isinstance(input_vals, Tensor)
-        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=(ks, self.w))[0].T
+        kernel_size = (input_vals.shape[1], self.w)
+        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=kernel_size)[0].T
         input_ndx = input_vals[:, : self.w].long()
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
