@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-"""Unit test AE."""
+"""Unit test AAEC."""
 
 from os.path import dirname
 from pathlib import Path
@@ -18,7 +18,7 @@ from SeqEN2.model.data_loader import DataLoader, read_json
 
 
 class TestAutoencoder(TestCase):
-    """Test items for AE class"""
+    """Test items for AAEC class"""
 
     root = Path(dirname(__file__)).parent.parent.parent
     device = device("cuda" if cuda.is_available() else "cpu")
@@ -47,7 +47,7 @@ class TestAutoencoder(TestCase):
     def test_transform_input(self):
         # test batch returns a tuple (data, metadata)
         input_vals = self.test_batch[0]
-        input_ndx, target_vals, one_hot_input = self.autoencoder.transform_input(
+        input_ndx, target_vals, one_hot_input = self.autoencoder.transform_input_cl(
             input_vals, self.device
         )
         self.assertEqual(
@@ -68,7 +68,7 @@ class TestAutoencoder(TestCase):
         self.assertEqual(2, target_vals.shape[1], "target_vals.shape[0] do not match two")
         # train batch returns data without any metadata
         input_vals = self.train_batch
-        input_ndx, target_vals, one_hot_input = self.autoencoder.transform_input(
+        input_ndx, target_vals, one_hot_input = self.autoencoder.transform_input_cl(
             input_vals, self.device
         )
         self.assertEqual(
@@ -91,7 +91,7 @@ class TestAutoencoder(TestCase):
     def test_forward(self):
         # test batch returns a tuple (data, metadata)
         input_vals = self.test_batch[0]
-        input_ndx, target_vals, one_hot_input = self.autoencoder.transform_input(
+        input_ndx, target_vals, one_hot_input = self.autoencoder.transform_input_cl(
             input_vals, self.device
         )
         devectorized, discriminator_output, classifier_output = self.autoencoder.forward_test(
@@ -102,19 +102,12 @@ class TestAutoencoder(TestCase):
         )
         self.assertEqual(2, discriminator_output.shape[1], "output2.shape[1] do not match two")
         self.assertEqual(2, classifier_output.shape[1], "output3.shape[1] do not match two")
+
+    def test_train_batch(self):
         # train batch returns data without any metadata
+        self.autoencoder.initialize_for_training()
         input_vals = self.train_batch
-        input_ndx, target_vals, one_hot_input = self.autoencoder.transform_input(
-            input_vals, self.device
-        )
-        devectorized, discriminator_output, classifier_output = self.autoencoder.forward_test(
-            one_hot_input
-        )
-        self.assertEqual(
-            self.autoencoder.d0, devectorized.shape[1], "output.shape[1] do not match d0"
-        )
-        self.assertEqual(2, discriminator_output.shape[1], "output2.shape[1] do not match two")
-        self.assertEqual(2, classifier_output.shape[1], "output3.shape[1] do not match two")
+        self.autoencoder.train_batch(input_vals, self.device, wandb_log=False)
 
 
 if __name__ == "__main__":
