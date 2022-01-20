@@ -9,6 +9,7 @@ from os import system
 from os.path import dirname
 from pathlib import Path
 
+from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import read_json
 from SeqEN2.model.model import Model
 from SeqEN2.utils.custom_arg_parser import TrainSessionArgParser
@@ -47,7 +48,7 @@ class TrainSession:
 
     def load_arch(self, arch):
         arch_path = self.root / "config" / "arch" / f"{arch}.json"
-        return read_json(str(arch_path))
+        return Architecture(read_json(str(arch_path)))
 
     def load_train_params(self, train_params=None):
         if train_params is not None:
