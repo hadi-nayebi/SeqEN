@@ -1,0 +1,44 @@
+{
+        "arch1": [
+                "AE",
+                "VE:L(21,8)tanh",
+                "EN:C1(8,64,8)tanh.C1(64,32,6)tanh.F.L(256,10)tanh",
+                "DE:L(10,256)relu.UF(32,8).CT1(32,46,6)relu.CT1(64,8,8)relu",
+                "DV:L(8,21)lsm"
+        ],
+        "arch2": [
+                "AAE",
+                "VE:L(21,8)tanh",
+                "EN:C1(8,64,8)tanh.C1(64,32,6)tanh.F.L(256,10)tanh",
+                "DE:L(10,256)relu.UF(32,8).CT1(32,46,6)relu.CT1(64,8,8)relu",
+                "DV:L(8,21)lsm",
+                "DI:L(10,256)relu.L(256,2)lsm"
+        ],
+        "arch3": [
+                "AAEC",
+                "VE:L(21,8)tanh",
+                "EN:C1(8,64,8)tanh.C1(64,32,6)tanh.F.L(256,10)tanh",
+                "DE:L(10,256)relu.UF(32,8).CT1(32,46,6)relu.CT1(64,8,8)relu",
+                "DV:L(8,21)lsm",
+                "DI:L(10,256)relu.L(256,2)lsm",
+                "CL:L(10,256)relu.L(256,2)sm"
+        ],
+        "arch4": [
+                "AAEC",
+                "VE:L(21,8)tanh",
+                "EN:C1(8,64,8)tanh.C1(64,32,6)tanh.F.L(256,256)tanh.L(256,10)tanh",
+                "DE:L(10,256)relu.L(256,256)relu.UF(32,8).CT1(32,46,6)relu.CT1(64,8,8)relu",
+                "DV:L(8,21)lsm",
+                "DI:L(10,256)relu.L(256,2)lsm",
+                "CL:L(10,256)relu.L(256,2)sm"
+        ],
+        "arch5": [
+                "AAEC",
+                "VE:L(21,8)tanh",
+                "EN:C1(8,64,8)tanh.C1(64,32,6)tanh.F.L(256,256)tanh.L(256,256)tanh.L(256,10)tanh",
+                "DE:L(10,256)relu.L(256,256)relu.L(256,256)relu.UF(32,8).CT1(32,46,6)relu.CT1(64,8,8)relu",
+                "DV:L(8,21)lsm",
+                "DI:L(10,256)relu.L(256,256)relu.L(256,2)lsm",
+                "CL:L(10,256)relu.L(256,256)relu.L(256,2)sm"
+        ]
+}
