@@ -29,8 +29,8 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
 
     ds = 9  # SS labels dimension
 
-    def __init__(self, d1, dn, w, arch):
-        super(AdversarialAutoencoderClassifierSSDecoder, self).__init__(d1, dn, w, arch)
+    def __init__(self, d1, dn, w, arch, device):
+        super(AdversarialAutoencoderClassifierSSDecoder, self).__init__(d1, dn, w, arch, device)
         assert self.arch.ss_decoder is not None, "arch missing ss_decoder."
         self.ss_decoder = LayerMaker().make(self.arch.ss_decoder)
         # define customized optimizers

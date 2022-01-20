@@ -38,7 +38,9 @@ class TestAutoencoder(TestCase):
         # replace arch1.json to test other ones
         arch_path = cls.root / "config" / "arch" / "arch6.json"
         arch = Architecture(read_json(str(arch_path)))
-        cls.autoencoder = AdversarialAutoencoderClassifierSSDecoder(cls.d1, cls.dn, cls.w, arch)
+        cls.autoencoder = AdversarialAutoencoderClassifierSSDecoder(
+            cls.d1, cls.dn, cls.w, arch, cls.device
+        )
         cls.data_loader_cl = DataLoader()
         cls.data_loader_ss = DataLoader()
         cls.data_loader_cl.load_test_data(cls.DATASET_NAME_seq_ACTp, cls.device)

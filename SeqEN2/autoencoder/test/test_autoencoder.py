@@ -33,7 +33,7 @@ class TestAutoencoder(TestCase):
         # replace arch1.json to test other ones
         arch_path = cls.root / "config" / "arch" / "arch5.json"
         arch = Architecture(read_json(str(arch_path)))
-        cls.autoencoder = Autoencoder(cls.d1, cls.dn, cls.w, arch)
+        cls.autoencoder = Autoencoder(cls.d1, cls.dn, cls.w, arch, cls.device)
         cls.data_loader = DataLoader()
         cls.data_loader.load_test_data(cls.DATASET_NAME_seq_ACTp, cls.device)
         cls.data_loader.load_train_data(cls.DATASET_NAME_seq_ACTp, cls.device)
