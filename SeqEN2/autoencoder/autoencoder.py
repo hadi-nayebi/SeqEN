@@ -116,7 +116,7 @@ class Autoencoder(Module):
 
     def transform_input(self, input_vals, device, input_noise=0.0):
         # scans by sliding window of w
-        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=(2, self.w))[0].T
+        input_vals = unfold(input_vals[0].T[None, None, :, :], kernel_size=(2, self.w))[0].T
         input_ndx = input_vals[:, : self.w].long()
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
@@ -165,7 +165,7 @@ class Autoencoder(Module):
         """
         self.eval()
         with no_grad():
-            input_ndx, _, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
+            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
             reconstructor_output = self.forward_test(one_hot_input)
             reconstructor_loss = self.criterion_NLLLoss(
                 reconstructor_output, input_ndx.reshape((-1,))
