@@ -1,6 +1,6 @@
 {
-        "name": "gen1",
-        "type": "AAEC",
+        "name": "arch1",
+        "type": "AE",
         "vectorizer": [
                         {
                                 "type": "Linear", 
@@ -59,7 +59,7 @@
                         {
                                 "type": "ConvTranspose1d", 
                                 "in": 32,
-                                "out": 32,
+                                "out": 64,
                                 "kernel": 6
                         },
                         {
@@ -67,30 +67,12 @@
                         },
                         {
                                 "type": "ConvTranspose1d", 
-                                "in": 32,
+                                "in": 64,
                                 "out": 8,
                                 "kernel": 8
                         },
                         {
                                 "type": "ReLU" 
-                        }
-                ],
-        "discriminator": [
-                        {
-                                "type": "Linear", 
-                                "in": 10,
-                                "out": 128
-                        },
-                        {
-                                "type": "ReLU" 
-                        },
-                        {
-                                "type": "Linear", 
-                                "in": 128,
-                                "out": 2
-                        },
-                        {
-                                "type": "LogSoftmax" 
                         }
                 ],
         "devectorizer": [
@@ -101,24 +83,6 @@
                         },
                         {
                                 "type": "LogSoftmax" 
-                        }
-                ],
-        "classifier": [
-                        {
-                                "type": "Linear", 
-                                "in": 10,
-                                "out": 128
-                        },
-                        {
-                                "type": "ReLU" 
-                        },
-                        {
-                                "type": "Linear", 
-                                "in": 128,
-                                "out": 2
-                        },
-                        {
-                                "type": "Softmax" 
                         }
                 ]
 }

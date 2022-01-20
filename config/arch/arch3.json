@@ -1,12 +1,11 @@
 {
-        "name": "gen2",
+        "name": "arch3",
         "type": "AAEC",
         "vectorizer": [
                         {
                                 "type": "Linear", 
                                 "in": 21,
-                                "out": 8,
-                                "bias": false
+                                "out": 8
                         },
                         {
                                 "type": "Tanh"
@@ -60,7 +59,7 @@
                         {
                                 "type": "ConvTranspose1d", 
                                 "in": 32,
-                                "out": 32,
+                                "out": 64,
                                 "kernel": 6
                         },
                         {
@@ -68,7 +67,7 @@
                         },
                         {
                                 "type": "ConvTranspose1d", 
-                                "in": 32,
+                                "in": 64,
                                 "out": 8,
                                 "kernel": 8
                         },
@@ -80,14 +79,14 @@
                         {
                                 "type": "Linear", 
                                 "in": 10,
-                                "out": 128
+                                "out": 256
                         },
                         {
                                 "type": "ReLU" 
                         },
                         {
                                 "type": "Linear", 
-                                "in": 128,
+                                "in": 256,
                                 "out": 2
                         },
                         {
@@ -98,8 +97,7 @@
                         {
                                 "type": "Linear", 
                                 "in": 8,
-                                "out": 21,
-                                "bias": false
+                                "out": 21
                         },
                         {
                                 "type": "LogSoftmax" 
@@ -109,14 +107,14 @@
                         {
                                 "type": "Linear", 
                                 "in": 10,
-                                "out": 128
+                                "out": 256
                         },
                         {
                                 "type": "ReLU" 
                         },
                         {
                                 "type": "Linear", 
-                                "in": 128,
+                                "in": 256,
                                 "out": 2
                         },
                         {

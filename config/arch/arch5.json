@@ -1,5 +1,5 @@
 {
-        "name": "gen3",
+        "name": "arch5",
         "type": "AAEC",
         "vectorizer": [
                         {
@@ -44,6 +44,14 @@
                         {
                                 "type": "Linear", 
                                 "in": 256,
+                                "out": 256
+                        },
+                        {
+                                "type": "Tanh" 
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 256,
                                 "out": 10
                         },
                         {
@@ -58,7 +66,16 @@
                         },
                         {
                                 "type": "ReLU" 
-                        },{
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 256,
+                                "out": 256
+                        },
+                        {
+                                "type": "ReLU" 
+                        },
+                        {
                                 "type": "Linear", 
                                 "in": 256,
                                 "out": 256
@@ -74,7 +91,7 @@
                         {
                                 "type": "ConvTranspose1d", 
                                 "in": 32,
-                                "out": 32,
+                                "out": 64,
                                 "kernel": 6
                         },
                         {
@@ -82,7 +99,7 @@
                         },
                         {
                                 "type": "ConvTranspose1d", 
-                                "in": 32,
+                                "in": 64,
                                 "out": 8,
                                 "kernel": 8
                         },
@@ -94,14 +111,22 @@
                         {
                                 "type": "Linear", 
                                 "in": 10,
-                                "out": 128
+                                "out": 256
                         },
                         {
                                 "type": "ReLU" 
                         },
                         {
                                 "type": "Linear", 
-                                "in": 128,
+                                "in": 256,
+                                "out": 256
+                        },
+                        {
+                                "type": "ReLU" 
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 256,
                                 "out": 2
                         },
                         {
@@ -122,14 +147,22 @@
                         {
                                 "type": "Linear", 
                                 "in": 10,
-                                "out": 128
+                                "out": 256
                         },
                         {
                                 "type": "ReLU" 
                         },
                         {
                                 "type": "Linear", 
-                                "in": 128,
+                                "in": 256,
+                                "out": 256
+                        },
+                        {
+                                "type": "ReLU" 
+                        },
+                        {
+                                "type": "Linear", 
+                                "in": 256,
                                 "out": 2
                         },
                         {
