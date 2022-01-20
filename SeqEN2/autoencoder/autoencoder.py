@@ -5,6 +5,8 @@
 __version__ = "0.0.1"
 
 
+from typing import Dict
+
 from numpy.random import choice
 from torch import argmax, cat
 from torch import load as torch_load
@@ -29,10 +31,12 @@ class Autoencoder(Module):
 
     def __init__(self, d1, dn, w, arch):
         super(Autoencoder, self).__init__()
+        # common attr
         self.d1 = d1
         self.dn = dn
         self.w = w
-        self.arch = Architecture(arch)
+        self.arch = arch
+        # Modules
         self.vectorizer = LayerMaker().make(self.arch.vectorizer)
         self.encoder = LayerMaker().make(self.arch.encoder)
         self.decoder = LayerMaker().make(self.arch.decoder)
@@ -46,7 +50,6 @@ class Autoencoder(Module):
         self.criterion_NLLLoss = NLLLoss()
         # training inputs placeholders
         self.input_ndx = None
-        self.target_vals = None
         self.one_hot_input = None
 
     def forward_encoder_decoder(self, one_hot_input):
@@ -79,25 +82,6 @@ class Autoencoder(Module):
             model_dir / f"devectorizer_{version}.m", map_location=get_map_location()
         )
 
-    def transform_input(self, input_vals, device, input_noise=0.0):
-        # scans by sliding window of w
-        input_vals = unfold(
-            tensor(input_vals, device=device).T[None, None, :, :], kernel_size=(2, self.w)
-        )[0].T
-        input_ndx = input_vals[:, : self.w].long()
-        target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
-        target_vals = cat((target_vals, 1 - target_vals), 1).float()
-        one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
-        if input_noise > 0.0:
-            ndx = randperm(self.w)
-            size = list(one_hot_input.shape)
-            size[-1] = 1
-            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
-            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
-            return input_ndx, target_vals, mutated_one_hot
-        else:
-            return input_ndx, target_vals, one_hot_input
-
     def set_training_params(self, training_params=None):
         if training_params is None:
             self.training_params = {
@@ -105,6 +89,7 @@ class Autoencoder(Module):
                 for key in ["reconstructor"]
             }
         else:
+            assert isinstance(training_params, Dict), "training params must be a dict"
             self.training_params = training_params
 
     def initialize_training_components(self):
@@ -129,6 +114,21 @@ class Autoencoder(Module):
         self.set_training_params(training_params=training_params)
         self.initialize_training_components()
 
+    def transform_input(self, input_vals, device, input_noise=0.0):
+        # scans by sliding window of w
+        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=(2, self.w))[0].T
+        input_ndx = input_vals[:, : self.w].long()
+        one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
+        if input_noise > 0.0:
+            ndx = randperm(self.w)
+            size = list(one_hot_input.shape)
+            size[-1] = 1
+            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
+            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
+            return input_ndx, mutated_one_hot
+        else:
+            return input_ndx, one_hot_input
+
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -138,7 +138,7 @@ class Autoencoder(Module):
         :return:
         """
         self.train()
-        self.input_ndx, self.target_vals, self.one_hot_input = self.transform_input(
+        self.input_ndx, self.one_hot_input = self.transform_input(
             input_vals, device, input_noise=input_noise
         )
         # train encoder_decoder
