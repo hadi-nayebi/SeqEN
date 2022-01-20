@@ -50,16 +50,17 @@ class Model:
     def build_model(self, model_type, arch):
         assert model_type == arch.type, "madel type argument do not match arch.type"
         if arch.type == "AE":
-            self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch)
+            self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch, self.device)
         elif arch.type == "AAE":
-            self.autoencoder = AdversarialAutoencoder(self.d1, self.dn, self.w, arch)
+            self.autoencoder = AdversarialAutoencoder(self.d1, self.dn, self.w, arch, self.device)
         elif arch.type == "AAEC":
-            self.autoencoder = AdversarialAutoencoderClassifier(self.d1, self.dn, self.w, arch)
+            self.autoencoder = AdversarialAutoencoderClassifier(
+                self.d1, self.dn, self.w, arch, self.device
+            )
         elif arch.type == "AAECSS":
             self.autoencoder = AdversarialAutoencoderClassifierSSDecoder(
-                self.d1, self.dn, self.w, arch
+                self.d1, self.dn, self.w, arch, self.device
             )
-        self.autoencoder.to(self.device)
 
     def load_data(self, dataset_name):
         """

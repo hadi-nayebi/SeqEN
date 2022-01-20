@@ -29,13 +29,14 @@ class Autoencoder(Module):
     aa_keys = "WYFMILVAGPSTCEDQNHRK*"  # amino acids class labels
     d0 = 21  # amino acids class size
 
-    def __init__(self, d1, dn, w, arch):
+    def __init__(self, d1, dn, w, arch, device):
         super(Autoencoder, self).__init__()
         # common attr
         self.d1 = d1
         self.dn = dn
         self.w = w
         self.arch = arch
+        self.device = device
         # Modules
         self.vectorizer = LayerMaker().make(self.arch.vectorizer)
         self.encoder = LayerMaker().make(self.arch.encoder)
@@ -50,7 +51,6 @@ class Autoencoder(Module):
         self.criterion_NLLLoss = NLLLoss()
 
     def forward_encoder_decoder(self, one_hot_input):
-        print(self.vectorizer.device)
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
@@ -111,6 +111,7 @@ class Autoencoder(Module):
     def initialize_for_training(self, training_params=None):
         self.set_training_params(training_params=training_params)
         self.initialize_training_components()
+        self.to(self.device)
 
     def transform_input(self, input_vals, device, input_noise=0.0):
         # scans by sliding window of w
