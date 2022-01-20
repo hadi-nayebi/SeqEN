@@ -47,7 +47,7 @@ class TestAutoencoder(TestCase):
         input_vals = self.test_batch[0]
         input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
         self.assertEqual(
-            self.test_batch[0].shape[0] - self.w + 1,
+            input_vals.shape[0] - self.w + 1,
             input_ndx.shape[0],
             "input_ndx.shape[0] do not match batch.shape[0]",
         )
@@ -60,7 +60,7 @@ class TestAutoencoder(TestCase):
         input_vals = self.train_batch
         input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
         self.assertEqual(
-            self.train_batch.shape[0] - self.w + 1,
+            input_vals.shape[0] - self.w + 1,
             input_ndx.shape[0],
             "input_ndx.shape[0] do not match batch.shape[0]",
         )
