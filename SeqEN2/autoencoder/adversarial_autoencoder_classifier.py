@@ -5,7 +5,7 @@
 __version__ = "0.0.1"
 
 from numpy.random import choice
-from torch import argmax, cat
+from torch import Tensor, argmax, cat
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
@@ -31,6 +31,8 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         self.classifier_lr_scheduler = None
         # Loss functions
         self.criterion_MSELoss = MSELoss()
+        # training inputs placeholders
+        self.target_vals = None
 
     def forward_classifier(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -84,11 +86,11 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
             min_lr=self.training_params["classifier"]["min_lr"],
         )
 
-    def transform_input(self, input_vals, device, input_noise=0.0):
+    def transform_input(self, input_vals, device, ks=2, input_noise=0.0):
         # scans by sliding window of w
-        input_vals = unfold(
-            tensor(input_vals, device=device).T[None, None, :, :], kernel_size=(2, self.w)
-        )[0].T
+        assert isinstance(input_vals, Tensor)
+        kernel_size = (input_vals.shape[1], self.w)
+        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=kernel_size)[0].T
         input_ndx = input_vals[:, : self.w].long()
         target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
         target_vals = cat((target_vals, 1 - target_vals), 1).float()
