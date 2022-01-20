@@ -38,10 +38,10 @@ class TrainSession:
         # model placeholder
         self.model = None
 
-    def add_model(self, name, arch, model_type, d1=8, dn=10, w=20):
+    def add_model(self, name, arch, d1=8, dn=10, w=20):
         arch = self.load_arch(arch)
         if self.model is None:
-            self.model = Model(name, arch, model_type, d1=d1, dn=dn, w=w)
+            self.model = Model(name, arch, d1=d1, dn=dn, w=w)
 
     def load_data(self, dataset_name):
         self.model.load_data(dataset_name)
@@ -58,7 +58,6 @@ class TrainSession:
 
     def train(
         self,
-        run_title,
         epochs=10,
         batch_size=128,
         test_interval=100,
@@ -67,16 +66,17 @@ class TrainSession:
         log_every=100,
     ):
         if self.is_testing:
+            # add more default setting for is_testing
             epochs = 1
         training_params = self.load_train_params(training_params)
         self.model.train(
-            run_title,
             epochs=epochs,
             batch_size=batch_size,
             test_interval=test_interval,
             training_params=training_params,
             input_noise=input_noise,
-            log_every=100,
+            log_every=log_every,
+            is_training=self.is_testing,
         )
 
     def test(self, num_test_items=1):
@@ -85,7 +85,6 @@ class TrainSession:
     def overfit_tests(self, epochs=1000, num_test_items=1, input_noise=0.0, training_params=None):
         # overfit single sequence
         self.model.overfit(
-            f"overfit_{num_test_items}",
             epochs=epochs,
             num_test_items=num_test_items,
             input_noise=input_noise,
@@ -99,7 +98,6 @@ def main(args):
     train_session.add_model(
         args["Model Name"],
         args["Arch"],
-        args["Model Type"],
         d1=args["D1"],
         dn=args["Dn"],
         w=args["W"],
@@ -119,7 +117,6 @@ def main(args):
         train_session.test(num_test_items=args["Test Batch"])
     else:
         train_session.train(
-            args["Run Title"],
             epochs=args["Epochs"],
             batch_size=args["Train Batch"],
             test_interval=args["Test Interval"],
@@ -127,9 +124,6 @@ def main(args):
             input_noise=args["Input Noise"],
             log_every=args["Log every"],
         )
-    if train_session.is_testing:
-        train_dir = train_session.model.versions_path / args["Run Title"]
-        system(f"rm -r {train_dir}")
 
 
 if __name__ == "__main__":

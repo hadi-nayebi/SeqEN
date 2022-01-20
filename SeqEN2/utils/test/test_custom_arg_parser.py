@@ -67,7 +67,6 @@ class TestCustomArgParser(TestCase):
         train_session = TrainSessionArgParser()
         expected_pairs = {
             "Model Name": "T",
-            "Run Title": "Run-away",
             "Dataset0": "'All life'",
             "Dataset1": "",
             "Dataset2": "",
@@ -83,7 +82,6 @@ class TestCustomArgParser(TestCase):
             "Input Noise": 0.0,
             "Model ID": "",
             "Train Params": None,
-            "Model Type": "AE",
             "No Train": False,
             "Is Testing": False,
             "Overfitting": False,
@@ -93,7 +91,6 @@ class TestCustomArgParser(TestCase):
         sys.argv = [
             sys.argv[0],
             "--model=T",
-            "--run_title=Run-away",
             "--dataset0='All life'",
             "--arch='Scott Persing'",
         ]  # hack, cough

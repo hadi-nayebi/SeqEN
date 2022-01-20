@@ -48,7 +48,6 @@ class TrainSessionArgParser(DefaultParser):
 
     def _initialize(self) -> None:
         self.parser.add_argument("-n", "--model", type=str, help="Model Name", required=True)
-        self.parser.add_argument("-rt", "--run_title", type=str, help="Run Title", required=True)
         # dataset0: seq:act_p, dataset1: seq:ss, dataset2: seq:act_p:ss
         self.parser.add_argument("-d", "--dataset0", type=str, help="Dataset0", required=True)
         self.parser.add_argument("-dd", "--dataset1", type=str, help="Dataset1", default="")
@@ -73,7 +72,6 @@ class TrainSessionArgParser(DefaultParser):
         self.parser.add_argument(
             "-tp", "--train_params", type=str, help="Train Params", default=None
         )
-        self.parser.add_argument("-mt", "--model_type", type=str, help="Model Type", default="AE")
         self.parser.add_argument(
             "-nt", "--no_train", help="No Train", action="store_true", default=False
         )

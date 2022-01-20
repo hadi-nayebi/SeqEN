@@ -5,6 +5,8 @@
 __version__ = "0.0.1"
 
 
+from datetime import datetime
+from os import system
 from os.path import dirname
 from pathlib import Path
 
@@ -27,7 +29,7 @@ class Model:
 
     root = Path(dirname(__file__)).parent.parent
 
-    def __init__(self, name, arch, model_type, d1=8, dn=10, w=20):
+    def __init__(self, name, arch, d1=8, dn=10, w=20):
         self.name = name
         self.path = self.root / "models" / f"{self.name}"
         self.versions_path = self.path / "versions"
@@ -36,7 +38,7 @@ class Model:
         self.w = w
         self.device = device("cuda" if cuda.is_available() else "cpu")
         self.autoencoder = None
-        self.build_model(model_type, arch)
+        self.build_model(arch)
         self.data_loader = None
         self.dataset_name = None
         self.config = None
@@ -44,8 +46,7 @@ class Model:
             self.path.mkdir()
             self.versions_path.mkdir()
 
-    def build_model(self, model_type, arch):
-        assert model_type == arch.type, "madel type argument do not match arch.type"
+    def build_model(self, arch):
         if arch.type == "AE":
             self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAE":
@@ -67,24 +68,34 @@ class Model:
 
     def train(
         self,
-        run_title,
         epochs=10,
         batch_size=128,
         test_interval=100,
         training_params=None,
         input_noise=0.0,
         log_every=100,
+        is_testing=False,
     ):
         """
         The main training loop for a model
-        :param run_title:
         :param epochs:
         :param batch_size:
         :param test_interval:
         :param training_params:
         :param input_noise:
+        :param log_every:
         :return:
         """
+        now = datetime.now().strftime("%Y%m%d%H%M")
+        model_type = self.autoencoder.arch.type
+        arch_name = self.autoencoder.arch.name
+        run_title = f"{now}_{model_type}_{arch_name}"
+        train_dir = self.versions_path / f"{run_title}"
+        assert (
+            not train_dir.exists()
+        ), "This directory already exist, choose a different title for the run!"
+        train_dir.mkdir()
+        # connect to wandb
         wandb.init(project=self.name, name=run_title)
         self.config = wandb.config
         self.config.batch_size = batch_size
@@ -92,14 +103,11 @@ class Model:
         self.config.dataset_name = self.dataset_name
         self.autoencoder.initialize_for_training(training_params)
         self.config.training_params = self.autoencoder.training_params
+        self.config.model_type = model_type
+        self.config.arch = arch_name
         wandb.watch(self.autoencoder)
         model = wandb.Artifact(f"{self.name}_model", type="model")
-        train_dir = self.versions_path / f"{run_title}"
-        if not train_dir.exists():
-            train_dir.mkdir()
-        else:
-            print("Choose a different title for the run!")
-            return
+        # start training loop
         iter_for_test = 0
         iter_for_log = 0
         for epoch in range(0, epochs):
@@ -123,6 +131,10 @@ class Model:
                 self.autoencoder.training_params,
                 str(train_dir / f"{run_title}_train_params.json"),
             )
+        if is_testing:
+            system(f"rm -r {train_dir}")
+        else:
+            system(f"mv {str(train_dir)} {str(train_dir)}_done")
 
     def test(self, num_test_items=1):
         """
@@ -133,11 +145,9 @@ class Model:
         for test_batch in self.data_loader.get_test_batch(batch_size=num_test_items):
             self.autoencoder.test_batch(test_batch, self.device)
 
-    def overfit(
-        self, run_title, epochs=1000, num_test_items=1, input_noise=0.0, training_params=None
-    ):
+    def overfit(self, epochs=1000, num_test_items=1, input_noise=0.0, training_params=None):
         raise NotImplementedError("No longer using this method, need a redo")
-        # wandb.init(project=self.name, name=f"{run_title}")
+        # wandb.init(project=self.name, name="overfitting")
         # self.config = wandb.config
         # self.config.batch_size = num_test_items
         # self.config.input_noise = input_noise
