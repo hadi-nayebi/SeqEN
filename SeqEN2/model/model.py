@@ -50,17 +50,16 @@ class Model:
     def build_model(self, model_type, arch):
         assert model_type == arch.type, "madel type argument do not match arch.type"
         if arch.type == "AE":
-            self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch, self.device)
+            self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAE":
-            self.autoencoder = AdversarialAutoencoder(self.d1, self.dn, self.w, arch, self.device)
+            self.autoencoder = AdversarialAutoencoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAEC":
-            self.autoencoder = AdversarialAutoencoderClassifier(
-                self.d1, self.dn, self.w, arch, self.device
-            )
+            self.autoencoder = AdversarialAutoencoderClassifier(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAECSS":
             self.autoencoder = AdversarialAutoencoderClassifierSSDecoder(
-                self.d1, self.dn, self.w, arch, self.device
+                self.d1, self.dn, self.w, arch
             )
+        self.autoencoder.to(self.device)
 
     def load_data(self, dataset_name):
         """
@@ -70,8 +69,8 @@ class Model:
         """
         # load datafiles
         self.data_loader = DataLoader()
-        self.data_loader.load_test_data(dataset_name)
-        self.data_loader.load_train_data(dataset_name)
+        self.data_loader.load_test_data(dataset_name, self.device)
+        self.data_loader.load_train_data(dataset_name, self.device)
 
     def train(
         self,

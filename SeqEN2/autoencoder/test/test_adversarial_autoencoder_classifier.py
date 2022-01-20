@@ -35,7 +35,7 @@ class TestAutoencoder(TestCase):
         # replace arch1.json to test other ones
         arch_path = cls.root / "config" / "arch" / "arch3.json"
         arch = Architecture(read_json(str(arch_path)))
-        cls.autoencoder = AdversarialAutoencoderClassifier(cls.d1, cls.dn, cls.w, arch, cls.device)
+        cls.autoencoder = AdversarialAutoencoderClassifier(cls.d1, cls.dn, cls.w, arch)
         cls.data_loader = DataLoader()
         cls.data_loader.load_test_data(cls.DATASET_NAME_seq_ACTp, cls.device)
         cls.data_loader.load_train_data(cls.DATASET_NAME_seq_ACTp, cls.device)
@@ -43,6 +43,7 @@ class TestAutoencoder(TestCase):
         cls.train_batch = list(cls.data_loader.get_train_batch(batch_size=10))[0]
         # fixed test sample
         cls.test_batch = cls.data_loader.get_test_by_key(cls.TEST_KEY)
+        cls.autoencoder.to(cls.device)
 
     def test_transform_input(self):
         # test batch returns a tuple (data, metadata)

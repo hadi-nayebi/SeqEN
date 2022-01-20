@@ -23,8 +23,8 @@ from SeqEN2.utils.utils import get_map_location
 
 # class for AAE Classifier
 class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
-    def __init__(self, d1, dn, w, arch, device):
-        super(AdversarialAutoencoderClassifier, self).__init__(d1, dn, w, arch, device)
+    def __init__(self, d1, dn, w, arch):
+        super(AdversarialAutoencoderClassifier, self).__init__(d1, dn, w, arch)
         assert self.arch.classifier is not None, "arch missing classifier."
         self.classifier = LayerMaker().make(self.arch.classifier)
         # define customized optimizers

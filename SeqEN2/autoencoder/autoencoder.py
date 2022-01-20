@@ -29,14 +29,13 @@ class Autoencoder(Module):
     aa_keys = "WYFMILVAGPSTCEDQNHRK*"  # amino acids class labels
     d0 = 21  # amino acids class size
 
-    def __init__(self, d1, dn, w, arch, device):
+    def __init__(self, d1, dn, w, arch):
         super(Autoencoder, self).__init__()
         # common attr
         self.d1 = d1
         self.dn = dn
         self.w = w
         self.arch = arch
-        self.device = device
         # Modules
         self.vectorizer = LayerMaker().make(self.arch.vectorizer)
         self.encoder = LayerMaker().make(self.arch.encoder)
@@ -111,7 +110,6 @@ class Autoencoder(Module):
     def initialize_for_training(self, training_params=None):
         self.set_training_params(training_params=training_params)
         self.initialize_training_components()
-        self.to(self.device)
 
     def transform_input(self, input_vals, device, input_noise=0.0):
         # scans by sliding window of w
@@ -138,10 +136,8 @@ class Autoencoder(Module):
         :param input_noise:
         :return:
         """
-        print(f"device at the start of train_batch {input_vals.device}")
         self.train()
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
-        print(f"device at one_hot_input {one_hot_input.device}")
         # train encoder_decoder
         self.reconstructor_optimizer.zero_grad()
         reconstructor_output = self.forward_encoder_decoder(one_hot_input)
@@ -165,7 +161,6 @@ class Autoencoder(Module):
         :param input_vals:
         :return:
         """
-        print(f"device at the start of train_batch {input_vals.device}")
         self.eval()
         with no_grad():
             input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)

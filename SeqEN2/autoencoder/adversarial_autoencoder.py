@@ -20,8 +20,8 @@ from SeqEN2.utils.utils import get_map_location
 
 # class for AAE
 class AdversarialAutoencoder(Autoencoder):
-    def __init__(self, d1, dn, w, arch, device):
-        super(AdversarialAutoencoder, self).__init__(d1, dn, w, arch, device)
+    def __init__(self, d1, dn, w, arch):
+        super(AdversarialAutoencoder, self).__init__(d1, dn, w, arch)
         assert self.arch.discriminator is not None, "arch missing discriminator."
         self.discriminator = LayerMaker().make(self.arch.discriminator)
         # define customized optimizers
