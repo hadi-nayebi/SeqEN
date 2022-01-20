@@ -64,6 +64,7 @@ class TrainSession:
         test_interval=100,
         training_params=None,
         input_noise=0.0,
+        log_every=100,
     ):
         if self.is_testing:
             epochs = 1
@@ -75,6 +76,7 @@ class TrainSession:
             test_interval=test_interval,
             training_params=training_params,
             input_noise=input_noise,
+            log_every=100,
         )
 
     def test(self, num_test_items=1):
@@ -123,6 +125,7 @@ def main(args):
             test_interval=args["Test Interval"],
             training_params=args["Train Params"],
             input_noise=args["Input Noise"],
+            log_every=args["Log every"],
         )
     if train_session.is_testing:
         train_dir = train_session.model.versions_path / args["Run Title"]

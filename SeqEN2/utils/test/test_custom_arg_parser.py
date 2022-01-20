@@ -88,6 +88,7 @@ class TestCustomArgParser(TestCase):
             "Is Testing": False,
             "Overfitting": False,
             "Verbose": False,
+            "Log every": 100,
         }
         sys.argv = [
             sys.argv[0],
