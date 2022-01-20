@@ -4,14 +4,12 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
-from numpy.random import choice
-from torch import Tensor, argmax, cat
+from torch import argmax
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
-from torch import tensor, transpose, zeros
-from torch.nn.functional import one_hot, unfold
+from torch import transpose, zeros
 
 import wandb
 from SeqEN2.autoencoder.autoencoder import Autoencoder
@@ -96,26 +94,6 @@ class AdversarialAutoencoder(Autoencoder):
             patience=self.training_params["discriminator"]["patience"],
             min_lr=self.training_params["discriminator"]["min_lr"],
         )
-
-    def transform_input(self, input_vals, device, ks=2, input_noise=0.0):
-        # scans by sliding window of w
-        assert isinstance(input_vals, Tensor)
-        input_vals = unfold(
-            tensor(input_vals, device=device).T[None, None, :, :], kernel_size=(ks, self.w)
-        )[0].T
-        input_ndx = input_vals[:, : self.w].long()
-        target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
-        target_vals = cat((target_vals, 1 - target_vals), 1).float()
-        one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
-        if input_noise > 0.0:
-            ndx = randperm(self.w)
-            size = list(one_hot_input.shape)
-            size[-1] = 1
-            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
-            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
-            return input_ndx, target_vals, mutated_one_hot
-        else:
-            return input_ndx, target_vals, one_hot_input
 
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
