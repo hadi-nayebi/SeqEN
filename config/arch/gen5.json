@@ -1,6 +1,6 @@
 {
         "name": "gen5",
-        "type": "AAE-classifier",
+        "type": "AAEC",
         "vectorizer": [
                         {
                                 "type": "Linear", 
