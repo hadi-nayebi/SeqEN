@@ -137,3 +137,6 @@ class DataLoader(object):
         for i in ndx:
             key = self.test_data_keys[i]
             yield self._test_data[key]
+
+    def get_test_by_key(self, key) -> (tensor, dict):
+        return self._test_data[key]
