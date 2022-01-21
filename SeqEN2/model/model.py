@@ -142,7 +142,8 @@ class Model:
         :param num_test_items:
         :return:
         """
-        for test_batch in self.data_loader.get_test_batch(batch_size=num_test_items):
+        for test_batch, metadata in self.data_loader.get_test_batch(batch_size=num_test_items):
+            # using metadata?
             self.autoencoder.test_batch(test_batch, self.device)
 
     def overfit(self, epochs=1000, num_test_items=1, input_noise=0.0, training_params=None):
