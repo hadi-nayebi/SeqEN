@@ -84,6 +84,7 @@ class Model:
         :param training_params:
         :param input_noise:
         :param log_every:
+        :param is_testing:
         :return:
         """
         now = datetime.now().strftime("%Y%m%d%H%M")
