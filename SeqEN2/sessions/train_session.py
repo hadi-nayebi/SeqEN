@@ -103,7 +103,7 @@ def main(args):
         w=args["W"],
     )
     # load datafiles
-    train_session.load_data(args["Dataset"])
+    train_session.load_data(args["Dataset0"])
     # if args['Model ID'] != '':
     #     session.model.load_model(args['Model ID'], map_location=get_map_location())
     if args["Overfitting"]:
