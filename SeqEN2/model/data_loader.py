@@ -95,6 +95,8 @@ class DataLoader(object):
         self._train_data = None
         self._test_data = None
         self.test_data_keys = None
+        self.train_data_size = None
+        self.test_data_size = None
 
     @property
     def train_data(self) -> dict:
@@ -111,6 +113,7 @@ class DataLoader(object):
         for key in self._test_data.keys():
             self._test_data[key] = to_tensor(self._test_data[key], key, device)
         self.test_data_keys = list(self._test_data.keys())
+        self.test_data_size = len(self._test_data)
 
     def load_train_data(self, dataset, device) -> None:
         filename = self.root / "data" / f"{dataset}_train.json.gz"
@@ -118,6 +121,7 @@ class DataLoader(object):
         # to tensor, metadata
         for key in self._train_data.keys():
             self._train_data[key] = to_tensor(self._train_data[key], key, device)
+        self.train_data_size = len(self._train_data)
 
     def get_train_batch(self, batch_size=128, max_size=None) -> array:
         keys = permutation(list(self._train_data.keys()))
