@@ -67,9 +67,9 @@ class TestCustomArgParser(TestCase):
         train_session = TrainSessionArgParser()
         expected_pairs = {
             "Model Name": "T",
-            "Dataset0": "'All life'",
-            "Dataset1": "",
-            "Dataset2": "",
+            "Dataset_cl": "'All life'",
+            "Dataset_ss": "",
+            "Dataset_clss": "",
             "Arch": "'Scott Persing'",
             "D1": 8,
             "Dn": 10,
@@ -91,7 +91,7 @@ class TestCustomArgParser(TestCase):
         sys.argv = [
             sys.argv[0],
             "--model=T",
-            "--dataset0='All life'",
+            "--dataset_cl='All life'",
             "--arch='Scott Persing'",
         ]  # hack, cough
         assert train_session.parser.description == "Train a protein sequence autoencoder"
