@@ -119,8 +119,8 @@ class Model:
                     iter_for_test = 0
                     self.test()
                 if (iter_for_log + 1) % log_every == 0:
+                    wandb.log({"epoch": epoch, "iter": iter_for_log})
                     for key, item in self.autoencoder.logs.items():
-                        wandb.log({"epoch": epoch, "iter": iter_for_log})
                         wandb.log({key: wandb.Histogram(item), "iter": iter_for_log})
                     self.autoencoder.reset_log()
             model_path = str(train_dir / f"epoch_{epoch}.model")
