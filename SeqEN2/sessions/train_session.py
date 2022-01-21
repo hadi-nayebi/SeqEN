@@ -43,8 +43,8 @@ class TrainSession:
         if self.model is None:
             self.model = Model(name, arch, d1=d1, dn=dn, w=w)
 
-    def load_data(self, dataset_name):
-        self.model.load_data(dataset_name)
+    def load_data(self, key, dataset_name):
+        self.model.load_data(key, dataset_name)
 
     def load_arch(self, arch):
         arch_path = self.root / "config" / "arch" / f"{arch}.json"
@@ -103,7 +103,11 @@ def main(args):
         w=args["W"],
     )
     # load datafiles
-    train_session.load_data(args["Dataset0"])
+    train_session.load_data("cl", args["Dataset_cl"])
+    if args["Dataset_ss"] != "":
+        train_session.load_data("ss", args["Dataset_ss"])
+    if args["Dataset_clss"] != "":
+        train_session.load_data("clss", args["Dataset_clss"])
     # if args['Model ID'] != '':
     #     session.model.load_model(args['Model ID'], map_location=get_map_location())
     if args["Overfitting"]:
