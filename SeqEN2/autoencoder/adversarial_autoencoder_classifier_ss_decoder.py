@@ -347,7 +347,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 generator_output,
                 zeros((generator_output.shape[0],), device=device).long(),
             )
-            ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals)
+            ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
             # reconstructor acc
             reconstructor_ndx = argmax(reconstructor_output, dim=1)
             reconstructor_accuracy = (
