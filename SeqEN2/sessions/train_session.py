@@ -76,6 +76,7 @@ class TrainSession:
             training_params=training_params,
             input_noise=input_noise,
             log_every=log_every,
+            is_testing=self.is_testing,
         )
 
     def test(self, num_test_items=1):
