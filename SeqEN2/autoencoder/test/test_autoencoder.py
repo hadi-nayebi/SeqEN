@@ -89,7 +89,9 @@ class TestAutoencoder(TestCase):
         # TODO: define a useful assert
 
     def test_initialize_for_training(self):
-        self.autoencoder.training_settings = AETrainingSettings(TrainingParams(lr=0.5))
+        self.autoencoder.training_settings = AETrainingSettings(
+            reconstructor=TrainingParams(lr=0.5)
+        )
         self.assertEqual(
             self.autoencoder.training_settings.reconstructor.lr, 0.5, "incorrect assignment"
         )
@@ -97,14 +99,14 @@ class TestAutoencoder(TestCase):
         self.autoencoder.initialize_for_training()
         self.assertEqual(
             self.autoencoder.training_settings,
-            AETrainingSettings(TrainingParams(lr=0.5)),
+            AETrainingSettings(reconstructor=TrainingParams(lr=0.5)),
             "Incorrect assignment",
         )
         # passing Dict do change anything
         self.autoencoder.initialize_for_training({"reconstructor": TrainingParams(lr=0.7)})
         self.assertEqual(
             self.autoencoder.training_settings,
-            AETrainingSettings(TrainingParams(lr=0.7)),
+            AETrainingSettings(reconstructor=TrainingParams(lr=0.7)),
             "Incorrect assignment",
         )
 

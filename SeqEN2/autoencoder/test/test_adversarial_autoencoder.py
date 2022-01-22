@@ -13,6 +13,7 @@ from torch import cuda, device
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import DataLoader, read_json
+from SeqEN2.utils.custom_dataclasses import AAETrainingSettings, TrainingParams
 
 
 class TestAdversarialAutoencoder(TestCase):
@@ -58,6 +59,44 @@ class TestAdversarialAutoencoder(TestCase):
         self.autoencoder.initialize_for_training()
         input_vals = self.train_batch
         self.autoencoder.train_batch(input_vals, self.device)
+        # TODO: define a useful assert
+
+    def test_initialize_for_training(self):
+        self.autoencoder.training_settings = AAETrainingSettings(generator=TrainingParams(lr=0.5))
+        self.assertEqual(
+            self.autoencoder.training_settings.generator.lr, 0.5, "incorrect assignment"
+        )
+        # passing None do not change anything
+        self.autoencoder.initialize_for_training()
+        self.assertEqual(
+            self.autoencoder.training_settings,
+            AAETrainingSettings(generator=TrainingParams(lr=0.5)),
+            "Incorrect assignment",
+        )
+        # passing Dict do change anything
+        self.autoencoder.initialize_for_training({"discriminator": TrainingParams(lr=0.7)})
+        self.assertEqual(
+            self.autoencoder.training_settings,
+            AAETrainingSettings(discriminator=TrainingParams(lr=0.7)),
+            "Incorrect assignment",
+        )
+
+    def test_training_settings(self):
+        # type checking, default
+        self.assertIsInstance(self.autoencoder.training_settings, AAETrainingSettings, "TypeError")
+
+        # assignments
+        def assign(ae, value):
+            ae.training_settings = value
+
+        self.assertRaises(TypeError, assign, self.autoencoder, 123)
+        self.assertRaises(KeyError, assign, self.autoencoder, {"classifier": TrainingParams()})
+        self.assertRaises(
+            KeyError,
+            assign,
+            self.autoencoder,
+            {"reconstructor": TrainingParams(), "classifier": TrainingParams()},
+        )
 
 
 if __name__ == "__main__":

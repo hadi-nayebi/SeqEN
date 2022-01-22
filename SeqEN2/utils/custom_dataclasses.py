@@ -40,8 +40,20 @@ class AETrainingSettings(NoneRefersDefault):
     reconstructor: TrainingParams = DefaultVal(TrainingParams())
 
 
-# @dataclass
-# class AAETrainingSettings(NoneRefersDefault):
-#     reconstructor: TrainingParams = DefaultVal(TrainingParams())
-#     reconstructor: TrainingParams = DefaultVal(TrainingParams())
-#     reconstructor: TrainingParams = DefaultVal(TrainingParams())
+@dataclass_json(undefined=Undefined.RAISE)
+@dataclass
+class AAETrainingSettings(AETrainingSettings):
+    generator: TrainingParams = DefaultVal(TrainingParams())
+    discriminator: TrainingParams = DefaultVal(TrainingParams())
+
+
+@dataclass_json(undefined=Undefined.RAISE)
+@dataclass
+class AAECTrainingSettings(AAETrainingSettings):
+    classifier: TrainingParams = DefaultVal(TrainingParams())
+
+
+@dataclass_json(undefined=Undefined.RAISE)
+@dataclass
+class AAECSSTrainingSettings(AAECTrainingSettings):
+    ss_decoder: TrainingParams = DefaultVal(TrainingParams())

@@ -4,6 +4,8 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
+from typing import Dict
+
 from torch import argmax
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
@@ -14,6 +16,7 @@ from torch import transpose, zeros
 import wandb
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
+from SeqEN2.utils.custom_dataclasses import AAETrainingSettings
 from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
@@ -24,12 +27,33 @@ class AdversarialAutoencoder(Autoencoder):
         super(AdversarialAutoencoder, self).__init__(d1, dn, w, arch)
         assert self.arch.discriminator is not None, "arch missing discriminator."
         self.discriminator = LayerMaker().make(self.arch.discriminator)
+        # training components
+        self._training_settings = AAETrainingSettings()
         # define customized optimizers
         self.generator_optimizer = None
         self.generator_lr_scheduler = None
         ###
         self.discriminator_optimizer = None
         self.discriminator_lr_scheduler = None
+
+    @property
+    def training_settings(self) -> AAETrainingSettings:
+        return self._training_settings
+
+    @training_settings.setter
+    def training_settings(self, value=None) -> None:
+        if isinstance(value, Dict) or value is None or isinstance(value, AAETrainingSettings):
+            if isinstance(value, Dict):
+                try:
+                    self._training_settings = AAETrainingSettings(**value)
+                except TypeError as e:
+                    raise KeyError(f"missing/extra keys for AAETrainingSettings, {e}")
+            elif isinstance(value, AAETrainingSettings):
+                self._training_settings = value
+        else:
+            raise TypeError(
+                f"Training settings must be a dict or None or type AAETrainingSettings, {type(value)} is passed."
+            )
 
     def forward_generator(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -58,15 +82,6 @@ class AdversarialAutoencoder(Autoencoder):
             model_dir / f"discriminator_{version}.m", map_location=get_map_location()
         )
 
-    def set_training_params(self, training_params=None):
-        if training_params is None:
-            self.training_params = {
-                key: {"lr": 0.01, "factor": 0.9, "patience": 10000, "min_lr": 0.00001}
-                for key in ["reconstructor", "generator", "discriminator"]
-            }
-        else:
-            self.training_params = training_params
-
     def initialize_training_components(self):
         super(AdversarialAutoencoder, self).initialize_training_components()
         # define customized optimizers
@@ -76,24 +91,24 @@ class AdversarialAutoencoder(Autoencoder):
                 {"params": self.encoder.parameters()},
                 {"params": self.discriminator.parameters()},
             ],
-            lr=self.training_params["generator"]["lr"],
+            lr=self._training_settings.generator.lr,
         )
         self.generator_lr_scheduler = CustomLRScheduler(
             self.generator_optimizer,
-            factor=self.training_params["generator"]["factor"],
-            patience=self.training_params["generator"]["patience"],
-            min_lr=self.training_params["generator"]["min_lr"],
+            factor=self._training_settings.generator.factor,
+            patience=self._training_settings.generator.patience,
+            min_lr=self._training_settings.generator.min_lr,
         )
         ###
         self.discriminator_optimizer = optim.SGD(
             [{"params": self.discriminator.parameters()}],
-            lr=self.training_params["discriminator"]["lr"],
+            lr=self._training_settings.discriminator.lr,
         )
         self.discriminator_lr_scheduler = CustomLRScheduler(
             self.discriminator_optimizer,
-            factor=self.training_params["discriminator"]["factor"],
-            patience=self.training_params["discriminator"]["patience"],
-            min_lr=self.training_params["discriminator"]["min_lr"],
+            factor=self._training_settings.discriminator.factor,
+            patience=self._training_settings.discriminator.patience,
+            min_lr=self._training_settings.discriminator.min_lr,
         )
 
     def train_batch(self, input_vals, device, input_noise=0.0):
@@ -114,7 +129,7 @@ class AdversarialAutoencoder(Autoencoder):
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # train generator
         self.generator_optimizer.zero_grad()
@@ -127,7 +142,7 @@ class AdversarialAutoencoder(Autoencoder):
         self.generator_optimizer.step()
         self.log("generator_loss", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
-        self.training_params["generator"]["lr"] = self.generator_lr_scheduler.get_last_lr()
+        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
         # train discriminator
         self.discriminator_optimizer.zero_grad()
         ndx = randperm(self.w)
@@ -140,7 +155,7 @@ class AdversarialAutoencoder(Autoencoder):
         self.discriminator_optimizer.step()
         self.log("discriminator_loss", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
-        self.training_params["discriminator"]["lr"] = self.discriminator_lr_scheduler.get_last_lr()
+        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
         gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
         self.generator_lr_scheduler.step(gen_disc_loss)
         self.discriminator_lr_scheduler.step(gen_disc_loss)

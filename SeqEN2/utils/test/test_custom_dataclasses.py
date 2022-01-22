@@ -41,7 +41,38 @@ class TestCustomDataclasses(TestCase):
         self.assertEqual(0.9, ae_ts.reconstructor.factor, "Value assignment for factor is wrong.")
 
     def test_aae_training_settings(self):
-        pass
+        # defaults
+        aae_ts = AAETrainingSettings()
+        default_tp = TrainingParams()
+        self.assertEqual(
+            aae_ts.reconstructor, default_tp, "The default value for reconstructor is wrong."
+        )
+        self.assertEqual(aae_ts.generator, default_tp, "The default value for generator is wrong.")
+        self.assertEqual(
+            aae_ts.discriminator, default_tp, "The default value for discriminator is wrong."
+        )
+        # assignments
+        aae_ts = AAETrainingSettings(discriminator=TrainingParams(min_lr=0.1))
+        self.assertEqual(
+            0.1, aae_ts.discriminator.min_lr, "Value assignment for learning rate is wrong."
+        )
+        self.assertEqual(0.9, aae_ts.generator.factor, "Value assignment for factor is wrong.")
+
+    def test_aaec_training_settings(self):
+        # defaults
+        aae_ts = AAECTrainingSettings()
+        default_tp = TrainingParams()
+        self.assertEqual(
+            aae_ts.classifier, default_tp, "The default value for classifier is wrong."
+        )
+
+    def test_aaecss_training_settings(self):
+        # defaults
+        aae_ts = AAECSSTrainingSettings()
+        default_tp = TrainingParams()
+        self.assertEqual(
+            aae_ts.ss_decoder, default_tp, "The default value for ss_decoder is wrong."
+        )
 
 
 if __name__ == "__main__":
