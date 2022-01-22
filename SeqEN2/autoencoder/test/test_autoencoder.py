@@ -13,6 +13,7 @@ from torch import cuda, device
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import DataLoader, read_json
+from SeqEN2.utils.custom_dataclasses import AETrainingSettings, TrainingParams
 
 
 class TestAutoencoder(TestCase):
@@ -85,6 +86,44 @@ class TestAutoencoder(TestCase):
         self.autoencoder.initialize_for_training()
         input_vals = self.train_batch
         self.autoencoder.train_batch(input_vals, self.device)
+        # TODO: define a useful assert
+
+    def test_initialize_for_training(self):
+        self.autoencoder.training_settings = AETrainingSettings(TrainingParams(lr=0.5))
+        self.assertEqual(
+            self.autoencoder.training_settings.reconstructor.lr, 0.5, "incorrect assignment"
+        )
+        # passing None do not change anything
+        self.autoencoder.initialize_for_training()
+        self.assertEqual(
+            self.autoencoder.training_settings,
+            AETrainingSettings(TrainingParams(lr=0.5)),
+            "Incorrect assignment",
+        )
+        # passing Dict do change anything
+        self.autoencoder.initialize_for_training({"reconstructor": TrainingParams(lr=0.7)})
+        self.assertEqual(
+            self.autoencoder.training_settings,
+            AETrainingSettings(TrainingParams(lr=0.7)),
+            "Incorrect assignment",
+        )
+
+    def test_training_settings(self):
+        # type checking, default
+        self.assertIsInstance(self.autoencoder.training_settings, AETrainingSettings, "TypeError")
+
+        # assignments
+        def assign(ae, value):
+            ae.training_settings = value
+
+        self.assertRaises(TypeError, assign, self.autoencoder, "string")
+        self.assertRaises(KeyError, assign, self.autoencoder, {"generator": TrainingParams()})
+        self.assertRaises(
+            KeyError,
+            assign,
+            self.autoencoder,
+            {"reconstructor": TrainingParams(), "generator": TrainingParams()},
+        )
 
 
 if __name__ == "__main__":

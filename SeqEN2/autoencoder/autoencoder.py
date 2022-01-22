@@ -4,7 +4,6 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
-
 from typing import Dict
 
 from numpy.random import choice
@@ -19,6 +18,7 @@ from torch.nn.functional import one_hot, unfold
 
 import wandb
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
+from SeqEN2.utils.custom_dataclasses import AETrainingSettings
 from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
@@ -42,7 +42,7 @@ class Autoencoder(Module):
         self.decoder = LayerMaker().make(self.arch.decoder)
         self.devectorizer = LayerMaker().make(self.arch.devectorizer)
         # training components
-        self.training_params = None
+        self._training_settings = AETrainingSettings()
         # define customized optimizers
         self.reconstructor_optimizer = None
         self.reconstructor_lr_scheduler = None
@@ -50,6 +50,25 @@ class Autoencoder(Module):
         self.criterion_NLLLoss = NLLLoss()
         # logger
         self.logs = {}
+
+    @property
+    def training_settings(self) -> AETrainingSettings:
+        return self._training_settings
+
+    @training_settings.setter
+    def training_settings(self, value=None) -> None:
+        if isinstance(value, Dict) or value is None or isinstance(value, AETrainingSettings):
+            if isinstance(value, Dict):
+                try:
+                    self._training_settings = AETrainingSettings(**value)
+                except TypeError as e:
+                    raise KeyError(f"missing/extra keys for AETrainingSettings, {e}")
+            elif isinstance(value, AETrainingSettings):
+                self._training_settings = value
+        else:
+            raise TypeError(
+                f"Training settings must be a dict or None or type AETrainingSettings, {type(value)} is passed."
+            )
 
     def forward_encoder_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -81,16 +100,6 @@ class Autoencoder(Module):
             model_dir / f"devectorizer_{version}.m", map_location=get_map_location()
         )
 
-    def set_training_params(self, training_params=None):
-        if training_params is None:
-            self.training_params = {
-                key: {"lr": 0.01, "factor": 0.9, "patience": 10000, "min_lr": 0.00001}
-                for key in ["reconstructor"]
-            }
-        else:
-            assert isinstance(training_params, Dict), "training params must be a dict"
-            self.training_params = training_params
-
     def initialize_training_components(self):
         # define customized optimizers
         self.reconstructor_optimizer = optim.SGD(
@@ -100,17 +109,17 @@ class Autoencoder(Module):
                 {"params": self.decoder.parameters()},
                 {"params": self.devectorizer.parameters()},
             ],
-            lr=self.training_params["reconstructor"]["lr"],
+            lr=self._training_settings.reconstructor.lr,
         )
         self.reconstructor_lr_scheduler = CustomLRScheduler(
             self.reconstructor_optimizer,
-            factor=self.training_params["reconstructor"]["factor"],
-            patience=self.training_params["reconstructor"]["patience"],
-            min_lr=self.training_params["reconstructor"]["min_lr"],
+            factor=self._training_settings.reconstructor.factor,
+            patience=self._training_settings.reconstructor.patience,
+            min_lr=self._training_settings.reconstructor.min_lr,
         )
 
-    def initialize_for_training(self, training_params=None):
-        self.set_training_params(training_params=training_params)
+    def initialize_for_training(self, training_settings=None):
+        self.training_settings = training_settings
         self.initialize_training_components()
 
     def transform_input(self, input_vals, device, input_noise=0.0):
@@ -157,7 +166,7 @@ class Autoencoder(Module):
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # clean up
         del input_ndx
