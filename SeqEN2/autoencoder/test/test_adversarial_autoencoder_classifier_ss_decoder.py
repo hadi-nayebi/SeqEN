@@ -37,7 +37,7 @@ class TestAutoencoder(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # replace arch1.json to test other ones
-        arch_path = cls.root / "config" / "arch" / "arch6.json"
+        arch_path = cls.root / "config" / "arch" / "arch7.json"
         arch = Architecture(read_json(str(arch_path)))
         cls.autoencoder = AdversarialAutoencoderClassifierSSDecoder(cls.d1, cls.dn, cls.w, arch)
         cls.data_loader_cl = DataLoader()

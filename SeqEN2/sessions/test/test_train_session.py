@@ -2,7 +2,6 @@
 # coding: utf-8
 
 """Unit test TrainSession."""
-from pathlib import Path
 from unittest import TestCase
 from unittest import main as unittest_main
 

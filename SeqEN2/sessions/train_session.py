@@ -48,16 +48,14 @@ class TrainSession:
         self.model.load_data(key, dataset_name)
 
     def load_arch(self, arch):
-        arch_path = self.root / "config" / "arch" / f"{arch}.json"
+        arch_path = self.arch_dir / f"{arch}.json"
         return Architecture(read_json(str(arch_path)))
 
     def load_training_settings(self, training_settings=None) -> Dict:
         if training_settings is not None:
             if not isinstance(training_settings, str):
                 raise TypeError(f"expected str, received {type(training_settings)}")
-            training_settings_path = (
-                self.root / "config" / "train_params" / f"{training_settings}.json"
-            )
+            training_settings_path = self.train_params_dir / f"{training_settings}.json"
             training_settings = read_json(str(training_settings_path))
         return training_settings
 
