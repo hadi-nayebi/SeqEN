@@ -4,6 +4,8 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
+from typing import Dict
+
 from numpy.random import choice
 from torch import Tensor, argmax, cat
 from torch import load as torch_load
@@ -17,6 +19,7 @@ from torch.nn.functional import one_hot, unfold
 import wandb
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
+from SeqEN2.utils.custom_dataclasses import AAECTrainingSettings
 from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
@@ -27,11 +30,32 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         super(AdversarialAutoencoderClassifier, self).__init__(d1, dn, w, arch)
         assert self.arch.classifier is not None, "arch missing classifier."
         self.classifier = LayerMaker().make(self.arch.classifier)
+        # training components
+        self._training_settings = AAECTrainingSettings()
         # define customized optimizers
         self.classifier_optimizer = None
         self.classifier_lr_scheduler = None
         # Loss functions
         self.criterion_MSELoss = MSELoss()
+
+    @property
+    def training_settings(self) -> AAECTrainingSettings:
+        return self._training_settings
+
+    @training_settings.setter
+    def training_settings(self, value=None) -> None:
+        if isinstance(value, Dict) or value is None or isinstance(value, AAECTrainingSettings):
+            if isinstance(value, Dict):
+                try:
+                    self._training_settings = AAECTrainingSettings(**value)
+                except TypeError as e:
+                    raise KeyError(f"missing/extra keys for AAECTrainingSettings, {e}")
+            elif isinstance(value, AAECTrainingSettings):
+                self._training_settings = value
+        else:
+            raise TypeError(
+                f"Training settings must be a dict or None or type AAECTrainingSettings, {type(value)} is passed."
+            )
 
     def forward_classifier(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -58,15 +82,6 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
             model_dir / f"classifier_{version}.m", map_location=get_map_location()
         )
 
-    def set_training_params(self, training_params=None):
-        if training_params is None:
-            self.training_params = {
-                key: {"lr": 0.01, "factor": 0.9, "patience": 10000, "min_lr": 0.00001}
-                for key in ["reconstructor", "generator", "discriminator", "classifier"]
-            }
-        else:
-            self.training_params = training_params
-
     def initialize_training_components(self):
         super(AdversarialAutoencoderClassifier, self).initialize_training_components()
         # define customized optimizers
@@ -76,13 +91,13 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
                 {"params": self.encoder.parameters()},
                 {"params": self.classifier.parameters()},
             ],
-            lr=self.training_params["classifier"]["lr"],
+            lr=self._training_settings.classifier.lr,
         )
         self.classifier_lr_scheduler = CustomLRScheduler(
             self.classifier_optimizer,
-            factor=self.training_params["classifier"]["factor"],
-            patience=self.training_params["classifier"]["patience"],
-            min_lr=self.training_params["classifier"]["min_lr"],
+            factor=self._training_settings.classifier.factor,
+            patience=self._training_settings.classifier.patience,
+            min_lr=self._training_settings.classifier.min_lr,
         )
 
     def transform_input(self, input_vals, device, input_noise=0.0):
@@ -127,7 +142,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # train generator
         self.generator_optimizer.zero_grad()
@@ -140,7 +155,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         self.generator_optimizer.step()
         self.log("generator_loss", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
-        self.training_params["generator"]["lr"] = self.generator_lr_scheduler.get_last_lr()
+        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
         # train discriminator
         self.discriminator_optimizer.zero_grad()
         ndx = randperm(self.w)
@@ -153,7 +168,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         self.discriminator_optimizer.step()
         self.log("discriminator_loss", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
-        self.training_params["discriminator"]["lr"] = self.discriminator_lr_scheduler.get_last_lr()
+        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
         gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
         self.generator_lr_scheduler.step(gen_disc_loss)
         self.discriminator_lr_scheduler.step(gen_disc_loss)
@@ -165,7 +180,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         self.classifier_optimizer.step()
         self.log("classifier_loss", classifier_loss.item())
         self.log("classifier_LR", self.classifier_lr_scheduler.get_last_lr())
-        self.training_params["classifier"]["lr"] = self.classifier_lr_scheduler.get_last_lr()
+        self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
         self.classifier_lr_scheduler.step(classifier_loss.item())
         # clean up
         del input_ndx

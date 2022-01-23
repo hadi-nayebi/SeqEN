@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """Unit test AE."""
-
+from os import system
 from os.path import dirname
 from pathlib import Path
 from unittest import TestCase
@@ -126,6 +126,13 @@ class TestAutoencoder(TestCase):
             self.autoencoder,
             {"reconstructor": TrainingParams(), "generator": TrainingParams()},
         )
+
+    def test_saving_training_settings(self):
+        train_dir = self.root / "models" / "dummy"
+        self.autoencoder.save_training_settings(train_dir)
+        filepath = train_dir / "training_settings.json"
+        self.assertEqual((str(filepath), filepath.is_file()), (str(filepath), True))
+        system(f"rm {str(filepath)}")
 
 
 if __name__ == "__main__":

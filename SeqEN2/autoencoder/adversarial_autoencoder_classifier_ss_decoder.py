@@ -20,6 +20,7 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier import (
     AdversarialAutoencoderClassifier,
 )
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
+from SeqEN2.utils.custom_dataclasses import AAECSSTrainingSettings
 from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
@@ -33,9 +34,30 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         super(AdversarialAutoencoderClassifierSSDecoder, self).__init__(d1, dn, w, arch)
         assert self.arch.ss_decoder is not None, "arch missing ss_decoder."
         self.ss_decoder = LayerMaker().make(self.arch.ss_decoder)
+        # training components
+        self._training_settings = AAECSSTrainingSettings()
         # define customized optimizers
         self.ss_decoder_optimizer = None
         self.ss_decoder_lr_scheduler = None
+
+    @property
+    def training_settings(self) -> AAECSSTrainingSettings:
+        return self._training_settings
+
+    @training_settings.setter
+    def training_settings(self, value=None) -> None:
+        if isinstance(value, Dict) or value is None or isinstance(value, AAECSSTrainingSettings):
+            if isinstance(value, Dict):
+                try:
+                    self._training_settings = AAECSSTrainingSettings(**value)
+                except TypeError as e:
+                    raise KeyError(f"missing/extra keys for AAECSSTrainingSettings, {e}")
+            elif isinstance(value, AAECSSTrainingSettings):
+                self._training_settings = value
+        else:
+            raise TypeError(
+                f"Training settings must be a dict or None or type AAECSSTrainingSettings, {type(value)} is passed."
+            )
 
     def forward_ss_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -63,28 +85,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             model_dir / f"ss_decoder_{version}.m", map_location=get_map_location()
         )
 
-    def set_training_params(self, training_params=None):
-        if training_params is None:
-            self.training_params = {
-                key: {"lr": 0.01, "factor": 0.9, "patience": 10000, "min_lr": 0.00001}
-                for key in [
-                    "reconstructor",
-                    "generator",
-                    "discriminator",
-                    "classifier",
-                    "ss_decoder",
-                ]
-            }
-            self.training_params["gen"] = 3
-        else:
-            assert (
-                self.training_params["gen"] > 2
-            ), "Training params is from older gen, require 3 or larger"
-            assert (
-                "ss_decoder" in self.training_params.keys()
-            ), "ss_decoder is missing in training params."
-            self.training_params = training_params
-
     def initialize_training_components(self):
         super(AdversarialAutoencoderClassifierSSDecoder, self).initialize_training_components()
         # define customized optimizers
@@ -94,13 +94,13 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 {"params": self.encoder.parameters()},
                 {"params": self.ss_decoder.parameters()},
             ],
-            lr=self.training_params["ss_decoder"]["lr"],
+            lr=self._training_settings.ss_decoder.lr,
         )
         self.ss_decoder_lr_scheduler = CustomLRScheduler(
             self.ss_decoder_optimizer,
-            factor=self.training_params["ss_decoder"]["factor"],
-            patience=self.training_params["ss_decoder"]["patience"],
-            min_lr=self.training_params["ss_decoder"]["min_lr"],
+            factor=self._training_settings.ss_decoder.factor,
+            patience=self._training_settings.ss_decoder.patience,
+            min_lr=self._training_settings.ss_decoder.min_lr,
         )
 
     def transform_input(self, input_vals, device, input_noise=0.0):
@@ -167,7 +167,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss_cl", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # train generator
         self.generator_optimizer.zero_grad()
@@ -180,7 +180,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.generator_optimizer.step()
         self.log("generator_loss_cl", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
-        self.training_params["generator"]["lr"] = self.generator_lr_scheduler.get_last_lr()
+        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
         # train discriminator
         self.discriminator_optimizer.zero_grad()
         ndx = randperm(self.w)
@@ -193,7 +193,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.discriminator_optimizer.step()
         self.log("discriminator_loss_cl", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
-        self.training_params["discriminator"]["lr"] = self.discriminator_lr_scheduler.get_last_lr()
+        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
         gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
         self.generator_lr_scheduler.step(gen_disc_loss)
         self.discriminator_lr_scheduler.step(gen_disc_loss)
@@ -205,7 +205,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.classifier_optimizer.step()
         self.log("classifier_loss", classifier_loss.item())
         self.log("classifier_LR", self.classifier_lr_scheduler.get_last_lr())
-        self.training_params["classifier"]["lr"] = self.classifier_lr_scheduler.get_last_lr()
+        self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
         self.classifier_lr_scheduler.step(classifier_loss.item())
         # clean up
         del reconstructor_loss
@@ -228,7 +228,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss_ss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self.training_params["reconstructor"]["lr"] = self.reconstructor_lr_scheduler.get_last_lr()
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # train encoder_SS_decoder
         self.ss_decoder_optimizer.zero_grad()
@@ -238,7 +238,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.ss_decoder_optimizer.step()
         self.log("ss_decoder_loss", ss_decoder_loss.item())
         self.log("ss_decoder_LR", self.ss_decoder_lr_scheduler.get_last_lr())
-        self.training_params["ss_decoder"]["lr"] = self.ss_decoder_lr_scheduler.get_last_lr()
+        self._training_settings.ss_decoder.lr = self.ss_decoder_lr_scheduler.get_last_lr()
         self.ss_decoder_lr_scheduler.step(ss_decoder_loss.item())
         # train generator
         self.generator_optimizer.zero_grad()
@@ -251,7 +251,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.generator_optimizer.step()
         self.log("generator_loss_ss", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
-        self.training_params["generator"]["lr"] = self.generator_lr_scheduler.get_last_lr()
+        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
         # train discriminator
         self.discriminator_optimizer.zero_grad()
         ndx = randperm(self.w)
@@ -264,7 +264,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.discriminator_optimizer.step()
         self.log("discriminator_loss_ss", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
-        self.training_params["discriminator"]["lr"] = self.discriminator_lr_scheduler.get_last_lr()
+        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
         gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
         self.generator_lr_scheduler.step(gen_disc_loss)
         self.discriminator_lr_scheduler.step(gen_disc_loss)

@@ -18,6 +18,7 @@ from torch.nn.functional import one_hot, unfold
 
 import wandb
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
+from SeqEN2.model.data_loader import write_json
 from SeqEN2.utils.custom_dataclasses import AETrainingSettings
 from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
@@ -69,6 +70,12 @@ class Autoencoder(Module):
             raise TypeError(
                 f"Training settings must be a dict or None or type AETrainingSettings, {type(value)} is passed."
             )
+
+    def save_training_settings(self, train_dir):
+        write_json(
+            self.training_settings.to_dict(),
+            str(train_dir / "training_settings.json"),
+        )
 
     def forward_encoder_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
