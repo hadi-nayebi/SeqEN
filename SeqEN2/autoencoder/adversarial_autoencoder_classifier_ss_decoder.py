@@ -165,7 +165,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
         reconstructor_loss.backward()
         self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss_cl", reconstructor_loss.item())
+        self.log("reconstructor_loss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
@@ -178,7 +178,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         )
         generator_loss.backward()
         self.generator_optimizer.step()
-        self.log("generator_loss_cl", generator_loss.item())
+        self.log("generator_loss", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
         self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
         # train discriminator
@@ -191,7 +191,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         )
         discriminator_loss.backward()
         self.discriminator_optimizer.step()
-        self.log("discriminator_loss_cl", discriminator_loss.item())
+        self.log("discriminator_loss", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
         self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
         gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
@@ -226,7 +226,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
         reconstructor_loss.backward()
         self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss_ss", reconstructor_loss.item())
+        self.log("reconstructor_loss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
@@ -249,7 +249,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         )
         generator_loss.backward()
         self.generator_optimizer.step()
-        self.log("generator_loss_ss", generator_loss.item())
+        self.log("generator_loss", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
         self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
         # train discriminator
@@ -262,7 +262,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         )
         discriminator_loss.backward()
         self.discriminator_optimizer.step()
-        self.log("discriminator_loss_ss", discriminator_loss.item())
+        self.log("discriminator_loss", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
         self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
         gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
@@ -317,11 +317,11 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
             )
             # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss_cl", reconstructor_loss.item())
-            self.log("test_generator_loss_cl", generator_loss.item())
+            self.log("test_reconstructor_loss", reconstructor_loss.item())
+            self.log("test_generator_loss", generator_loss.item())
             self.log("test_classifier_loss", classifier_loss.item())
-            self.log("test_reconstructor_accuracy_cl", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy_cl", consensus_seq_acc)
+            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
+            self.log("test_consensus_accuracy", consensus_seq_acc)
             # clean up
             del reconstructor_output
             del generator_output
@@ -366,11 +366,11 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 target_vals, ss_decoder_ndx.reshape((-1, self.w)), device
             )
             # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss_ss", reconstructor_loss.item())
-            self.log("test_generator_loss_ss", generator_loss.item())
+            self.log("test_reconstructor_loss", reconstructor_loss.item())
+            self.log("test_generator_loss", generator_loss.item())
             self.log("test_ss_decoder_loss", ss_decoder_loss.item())
-            self.log("test_reconstructor_accuracy_ss", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy_ss", consensus_seq_acc)
+            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
+            self.log("test_consensus_accuracy", consensus_seq_acc)
             self.log("test_ss_decoder_accuracy", ss_decoder_accuracy.item())
             self.log("test_consensus_ss_accuracy", consensus_ss_acc)
             # clean up
