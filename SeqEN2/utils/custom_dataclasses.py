@@ -1,19 +1,18 @@
 """Collection of data structures and validations"""
 
-# DefaultVal and NoneRefersDefault -> https://stackoverflow.com/users/2128545/mikeschneeberger
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, is_dataclass
 from typing import Any
 
 from dataclasses_json import Undefined, dataclass_json
 
 
 @dataclass
-class DefaultVal:
+class DefaultVal:  # -> https://stackoverflow.com/users/2128545/mikeschneeberger
     val: Any
 
 
 @dataclass
-class NoneRefersDefault:
+class NoneRefersDefault:  # -> https://stackoverflow.com/users/2128545/mikeschneeberger
     def __post_init__(self):
         for field in fields(self):
             # if a field of this data class defines a default value of type
@@ -23,6 +22,30 @@ class NoneRefersDefault:
                 field_val = getattr(self, field.name)
                 if isinstance(field_val, DefaultVal) or field_val is None:
                     setattr(self, field.name, field.default.val)
+
+
+# decorator to wrap original __init__ -> https://www.geeksforgeeks.org/creating-nested-dataclass-objects-in-python/
+def nested_deco(*args, **kwargs):
+    """decorator for assigning nested dict to nested dataclass"""
+
+    def wrapper(check_class):
+        # passing class to investigate
+        check_class = dataclass(check_class, **kwargs)
+        o_init = check_class.__init__
+
+        def __init__(self, *args, **kwargs):
+            for name, value in kwargs.items():
+                # getting field type
+                ft = check_class.__annotations__.get(name, None)
+                if is_dataclass(ft) and isinstance(value, dict):
+                    obj = ft(**value)
+                    kwargs[name] = obj
+                o_init(self, *args, **kwargs)
+
+        check_class.__init__ = __init__
+        return check_class
+
+    return wrapper(args[0]) if args else wrapper
 
 
 @dataclass_json(undefined=Undefined.RAISE)
@@ -35,25 +58,33 @@ class TrainingParams(NoneRefersDefault):
 
 
 @dataclass_json(undefined=Undefined.RAISE)
-@dataclass
+@nested_deco
 class AETrainingSettings(NoneRefersDefault):
     reconstructor: TrainingParams = DefaultVal(TrainingParams())
 
 
 @dataclass_json(undefined=Undefined.RAISE)
-@dataclass
-class AAETrainingSettings(AETrainingSettings):
+@nested_deco
+class AAETrainingSettings(NoneRefersDefault):
+    reconstructor: TrainingParams = DefaultVal(TrainingParams())
     generator: TrainingParams = DefaultVal(TrainingParams())
     discriminator: TrainingParams = DefaultVal(TrainingParams())
 
 
 @dataclass_json(undefined=Undefined.RAISE)
-@dataclass
-class AAECTrainingSettings(AAETrainingSettings):
+@nested_deco
+class AAECTrainingSettings(NoneRefersDefault):
+    reconstructor: TrainingParams = DefaultVal(TrainingParams())
+    generator: TrainingParams = DefaultVal(TrainingParams())
+    discriminator: TrainingParams = DefaultVal(TrainingParams())
     classifier: TrainingParams = DefaultVal(TrainingParams())
 
 
 @dataclass_json(undefined=Undefined.RAISE)
-@dataclass
-class AAECSSTrainingSettings(AAECTrainingSettings):
+@nested_deco
+class AAECSSTrainingSettings(NoneRefersDefault):
+    reconstructor: TrainingParams = DefaultVal(TrainingParams())
+    generator: TrainingParams = DefaultVal(TrainingParams())
+    discriminator: TrainingParams = DefaultVal(TrainingParams())
+    classifier: TrainingParams = DefaultVal(TrainingParams())
     ss_decoder: TrainingParams = DefaultVal(TrainingParams())
