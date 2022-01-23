@@ -72,7 +72,7 @@ class TrainSessionArgParser(DefaultParser):
         self.parser.add_argument("-no", "--noise", type=float, help="Input Noise", default=0.0)
         self.parser.add_argument("-mid", "--model_id", type=str, help="Model ID", default="")
         self.parser.add_argument(
-            "-tp", "--train_params", type=str, help="Train Params", default=None
+            "-tp", "--training_settings", type=str, help="Training Settings", default=None
         )
         self.parser.add_argument(
             "-nt", "--no_train", help="No Train", action="store_true", default=False

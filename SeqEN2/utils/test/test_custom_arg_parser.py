@@ -81,7 +81,7 @@ class TestCustomArgParser(TestCase):
             "Test Interval": 100,
             "Input Noise": 0.0,
             "Model ID": "",
-            "Train Params": None,
+            "Training Settings": None,
             "No Train": False,
             "Is Testing": False,
             "Overfitting": False,

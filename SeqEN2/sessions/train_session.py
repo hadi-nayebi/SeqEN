@@ -61,19 +61,19 @@ class TrainSession:
         epochs=10,
         batch_size=128,
         test_interval=100,
-        training_params=None,
+        training_settings=None,
         input_noise=0.0,
         log_every=100,
     ):
         if self.is_testing:
             # add more default setting for is_testing
             epochs = 1
-        training_params = self.load_train_params(training_params)
+        training_settings = self.load_train_params(training_settings)
         self.model.train(
             epochs=epochs,
             batch_size=batch_size,
             test_interval=test_interval,
-            training_params=training_params,
+            training_settings=training_settings,
             input_noise=input_noise,
             log_every=log_every,
             is_testing=self.is_testing,
@@ -82,13 +82,13 @@ class TrainSession:
     def test(self, num_test_items=1):
         self.model.test(num_test_items=num_test_items)
 
-    def overfit_tests(self, epochs=1000, num_test_items=1, input_noise=0.0, training_params=None):
+    def overfit_tests(self, epochs=1000, num_test_items=1, input_noise=0.0, training_settings=None):
         # overfit single sequence
         self.model.overfit(
             epochs=epochs,
             num_test_items=num_test_items,
             input_noise=input_noise,
-            training_params=training_params,
+            training_settings=training_settings,
         )
 
 
@@ -115,7 +115,7 @@ def main(args):
             epochs=args["Epochs"],
             num_test_items=args["Test Batch"],
             input_noise=args["Input Noise"],
-            training_params=args["Train Params"],
+            training_settings=args["Training Settings"],
         )
     elif args["No Train"]:
         train_session.test(num_test_items=args["Test Batch"])
@@ -124,7 +124,7 @@ def main(args):
             epochs=args["Epochs"],
             batch_size=args["Train Batch"],
             test_interval=args["Test Interval"],
-            training_params=args["Train Params"],
+            training_settings=args["Training Settings"],
             input_noise=args["Input Noise"],
             log_every=args["Log every"],
         )
