@@ -60,31 +60,31 @@ class TrainingParams(NoneRefersDefault):
 @dataclass_json(undefined=Undefined.RAISE)
 @nested_deco
 class AETrainingSettings(NoneRefersDefault):
-    reconstructor: TrainingParams = DefaultVal(TrainingParams())
+    reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
 
 
 @dataclass_json(undefined=Undefined.RAISE)
 @nested_deco
 class AAETrainingSettings(NoneRefersDefault):
-    reconstructor: TrainingParams = DefaultVal(TrainingParams())
-    generator: TrainingParams = DefaultVal(TrainingParams())
-    discriminator: TrainingParams = DefaultVal(TrainingParams())
+    reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    generator: TrainingParams = DefaultVal(TrainingParams()).val
+    discriminator: TrainingParams = DefaultVal(TrainingParams()).val
 
 
 @dataclass_json(undefined=Undefined.RAISE)
 @nested_deco
 class AAECTrainingSettings(NoneRefersDefault):
-    reconstructor: TrainingParams = DefaultVal(TrainingParams())
-    generator: TrainingParams = DefaultVal(TrainingParams())
-    discriminator: TrainingParams = DefaultVal(TrainingParams())
-    classifier: TrainingParams = DefaultVal(TrainingParams())
+    reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    generator: TrainingParams = DefaultVal(TrainingParams()).val
+    discriminator: TrainingParams = DefaultVal(TrainingParams()).val
+    classifier: TrainingParams = DefaultVal(TrainingParams()).val
 
 
 @dataclass_json(undefined=Undefined.RAISE)
 @nested_deco
 class AAECSSTrainingSettings(NoneRefersDefault):
-    reconstructor: TrainingParams = DefaultVal(TrainingParams())
-    generator: TrainingParams = DefaultVal(TrainingParams())
-    discriminator: TrainingParams = DefaultVal(TrainingParams())
-    classifier: TrainingParams = DefaultVal(TrainingParams())
-    ss_decoder: TrainingParams = DefaultVal(TrainingParams())
+    reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    generator: TrainingParams = DefaultVal(TrainingParams()).val
+    discriminator: TrainingParams = DefaultVal(TrainingParams()).val
+    classifier: TrainingParams = DefaultVal(TrainingParams()).val
+    ss_decoder: TrainingParams = DefaultVal(TrainingParams()).val
