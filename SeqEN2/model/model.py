@@ -183,7 +183,7 @@ class Model:
         self.config.input_noise = input_noise
         self.config.dataset_name_cl = self.dataset_name_cl
         self.autoencoder.initialize_for_training(training_settings=training_settings)
-        self.config.training_settings = self.autoencoder.training_settings
+        self.config.training_settings = self.autoencoder.training_settings.to_dict()
         self.config.model_type = model_type
         self.config.arch = arch_name
         wandb.watch(self.autoencoder)
