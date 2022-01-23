@@ -10,6 +10,7 @@ from os import system
 from os.path import dirname
 from pathlib import Path
 
+from numpy import mean
 from torch import cuda, device
 from torch import save as torch_save
 
@@ -159,6 +160,7 @@ class Model:
         wandb.log({"epoch": epoch, "iter": iter})
         for key, item in self.autoencoder.logs.items():
             wandb.log({key: wandb.Histogram(item)})
+            wandb.log({key: mean(item)})
         self.autoencoder.reset_log()
 
     def initialize_training(
