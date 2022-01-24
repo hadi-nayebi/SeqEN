@@ -122,3 +122,4 @@ class TestSessionArgParser(DefaultParser):
             "-ge", "--get_embedding", help="Get Embedding", action="store_true", default=False
         )
         self.parser.add_argument("-tsne", "--tsne_dim", type=int, help="tSNE dim", default=0)
+        self.parser.add_argument("-isomap", "--isomap_dim", type=int, help="Isomap dim", default=0)
