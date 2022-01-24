@@ -61,12 +61,17 @@ def consensus_acc(seq, output, device):
     return n / len(seq), consensus_seq
 
 
-def sliding_window(input_vals, w):
+def sliding_window(input_vals, w, keys=None):
     assert isinstance(input_vals, Tensor)
     assert input_vals.shape[1] == 1, "input shape must be (-1, 1)"
     kernel_size = (input_vals.shape[1], w)
     input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
     input_ndx = input_vals[:, :w]
+    if keys is not None:
+        sliced_seq = []
+        for item in input_ndx:
+            sliced_seq.append("".join([keys[i] for i in item.long()]))
+        return sliced_seq
     return input_ndx
 
 
