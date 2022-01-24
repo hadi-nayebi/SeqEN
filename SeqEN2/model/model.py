@@ -369,8 +369,8 @@ class Model:
             new_df["act_trg"] = (
                 sliding_window(input_vals[:, 1].reshape((-1, 1)), self.w).mean(axis=1).cpu()
             )
-            new_df["slices"] = (
-                sliding_window(input_vals[:, 0].reshape((-1, 1)), self.w).long().tolist()
+            new_df["slices"] = sliding_window(
+                input_vals[:, 0].reshape((-1, 1)), self.w, keys="WYFMILVAGPSTCEDQNHRK*"
             )
             new_df["embedding"] = embedding.tolist()
             yield new_df
