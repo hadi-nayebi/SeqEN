@@ -366,8 +366,8 @@ class Model:
             new_df.attrs["cons_ss"] = consensus_ss
             new_df["unique_id"] = arange(classifier_output[:, 0].shape[0])
             new_df["act_pred"] = classifier_output[:, 0].cpu()
-            new_df["act_trg"] = sliding_window(input_vals[:, 1].reshape((-1, 1)), self.w).mean(
-                axis=1
+            new_df["act_trg"] = (
+                sliding_window(input_vals[:, 1].reshape((-1, 1)), self.w).mean(axis=1).cpu()
             )
             new_df["slices"] = (
                 sliding_window(input_vals[:, 0].reshape((-1, 1)), self.w).long().tolist()
