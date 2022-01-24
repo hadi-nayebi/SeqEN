@@ -76,10 +76,10 @@ class AdversarialAutoencoder(Autoencoder):
         super(AdversarialAutoencoder, self).save(model_dir, epoch)
         torch_save(self.discriminator, model_dir / f"discriminator_{epoch}.m")
 
-    def load(self, model_dir, version):
-        super(AdversarialAutoencoder, self).load(model_dir, version)
+    def load(self, model_dir, model_id):
+        super(AdversarialAutoencoder, self).load(model_dir, model_id)
         self.discriminator = torch_load(
-            model_dir / f"discriminator_{version}.m", map_location=get_map_location()
+            model_dir / f"discriminator_{model_id}.m", map_location=get_map_location()
         )
 
     def initialize_training_components(self):

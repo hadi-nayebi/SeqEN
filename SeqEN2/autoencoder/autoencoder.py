@@ -93,18 +93,18 @@ class Autoencoder(Module):
         torch_save(self.decoder, model_dir / f"decoder_{epoch}.m")
         torch_save(self.devectorizer, model_dir / f"devectorizer_{epoch}.m")
 
-    def load(self, model_dir, version):
+    def load(self, model_dir, model_id):
         self.vectorizer = torch_load(
-            model_dir / f"vectorizer_{version}.m", map_location=get_map_location()
+            model_dir / f"vectorizer_{model_id}.m", map_location=get_map_location()
         )
         self.encoder = torch_load(
-            model_dir / f"encoder_{version}.m", map_location=get_map_location()
+            model_dir / f"encoder_{model_id}.m", map_location=get_map_location()
         )
         self.decoder = torch_load(
-            model_dir / f"decoder_{version}.m", map_location=get_map_location()
+            model_dir / f"decoder_{model_id}.m", map_location=get_map_location()
         )
         self.devectorizer = torch_load(
-            model_dir / f"devectorizer_{version}.m", map_location=get_map_location()
+            model_dir / f"devectorizer_{model_id}.m", map_location=get_map_location()
         )
 
     def initialize_training_components(self):
