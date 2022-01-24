@@ -6,8 +6,8 @@ from os.path import dirname
 from pathlib import Path
 from typing import Any
 
-from numpy import array, concatenate, ndarray
-from numpy.random import permutation, randint
+from numpy import arange, array, concatenate, ndarray
+from numpy.random import choice, permutation
 from torch import cat, tensor
 
 
@@ -138,7 +138,10 @@ class DataLoader(object):
             )
 
     def get_test_batch(self, batch_size=1) -> (tensor, dict):
-        ndx = randint(0, len(self.test_data_keys), batch_size)
+        if batch_size == -1:
+            batch_size = len(self.test_data_keys)
+        assert batch_size < self.test_data_size, "batch size is bigger than available data."
+        ndx = choice(arange(len(self.test_data_keys)), size=batch_size, replace=False)
         for i in ndx:
             key = self.test_data_keys[i]
             yield self._test_data[key]
