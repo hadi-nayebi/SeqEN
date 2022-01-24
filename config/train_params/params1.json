@@ -2,5 +2,6 @@
         "reconstructor": {"lr": 0.001, "factor": 0.9, "patience": 10000, "min_lr": 0.00001},
         "generator": {"lr": 0.001, "factor": 0.9, "patience": 10000, "min_lr": 0.00001},
         "discriminator": {"lr": 0.001, "factor": 0.9, "patience": 10000, "min_lr": 0.00001},
-        "classifier": {"lr": 0.001, "factor": 0.9, "patience": 10000, "min_lr": 0.00001}
+        "classifier": {"lr": 0.001, "factor": 0.9, "patience": 10000, "min_lr": 0.00001},
+        "continuity": {"lr": 0.001, "factor": 0.9, "patience": 10000, "min_lr": 0.00001}
 }
