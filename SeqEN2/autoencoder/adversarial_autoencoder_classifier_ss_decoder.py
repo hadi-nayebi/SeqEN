@@ -21,7 +21,7 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier import (
 )
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AAECSSTrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
+from SeqEN2.utils.seq_tools import consensus_acc, get_consensus_seq
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -75,14 +75,21 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
         return devectorized, discriminator_output, classifier_output, ss_decoder_output
 
+    def forward_embed(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        classifier_output = self.classifier(encoded)
+        ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
+        return encoded, classifier_output, ss_decoder_output
+
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoderClassifierSSDecoder, self).save(model_dir, epoch)
         torch_save(self.ss_decoder, model_dir / f"ss_decoder_{epoch}.m")
 
-    def load(self, model_dir, version):
-        super(AdversarialAutoencoderClassifierSSDecoder, self).load(model_dir, version)
+    def load(self, model_dir, model_id):
+        super(AdversarialAutoencoderClassifierSSDecoder, self).load(model_dir, model_id)
         self.ss_decoder = torch_load(
-            model_dir / f"ss_decoder_{version}.m", map_location=get_map_location()
+            model_dir / f"ss_decoder_{model_id}.m", map_location=get_map_location()
         )
 
     def initialize_training_components(self):
@@ -381,3 +388,26 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             del generator_loss
             del target_vals
             del ss_decoder_loss
+
+    def embed_batch(self, input_vals, device, input_noise=0.0):
+        """
+        Test a single batch of data, this will move into autoencoder
+        :param input_vals:
+        :return:
+        """
+        assert isinstance(input_vals, Tensor), "AAECSS requires a tensor as input_vals"
+        self.eval()
+        with no_grad():
+            # testing with cl data
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
+                input_vals, device, input_noise=input_noise
+            )
+            (
+                embedding,
+                classifier_output,
+                ss_decoder_output,
+            ) = self.forward_embed(one_hot_input)
+            consensus_ss = get_consensus_seq(
+                argmax(ss_decoder_output, dim=1).reshape((-1, self.w)), device
+            )
+            return embedding, classifier_output, consensus_ss
