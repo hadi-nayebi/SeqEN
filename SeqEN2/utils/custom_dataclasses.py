@@ -68,6 +68,7 @@ class AETrainingSettings(NoneRefersDefault):
 @nested_deco
 class AAETrainingSettings(NoneRefersDefault):
     reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    continuity: TrainingParams = DefaultVal(TrainingParams()).val
     generator: TrainingParams = DefaultVal(TrainingParams()).val
     discriminator: TrainingParams = DefaultVal(TrainingParams()).val
 
@@ -76,6 +77,7 @@ class AAETrainingSettings(NoneRefersDefault):
 @nested_deco
 class AAECTrainingSettings(NoneRefersDefault):
     reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    continuity: TrainingParams = DefaultVal(TrainingParams()).val
     generator: TrainingParams = DefaultVal(TrainingParams()).val
     discriminator: TrainingParams = DefaultVal(TrainingParams()).val
     classifier: TrainingParams = DefaultVal(TrainingParams()).val
@@ -85,6 +87,7 @@ class AAECTrainingSettings(NoneRefersDefault):
 @nested_deco
 class AAECSSTrainingSettings(NoneRefersDefault):
     reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    continuity: TrainingParams = DefaultVal(TrainingParams()).val
     generator: TrainingParams = DefaultVal(TrainingParams()).val
     discriminator: TrainingParams = DefaultVal(TrainingParams()).val
     classifier: TrainingParams = DefaultVal(TrainingParams()).val
