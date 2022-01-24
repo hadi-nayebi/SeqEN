@@ -10,7 +10,8 @@ from os import system
 from os.path import dirname
 from pathlib import Path
 
-from numpy import mean
+from numpy import arange, mean
+from pandas import DataFrame
 from torch import cuda, device
 from torch import save as torch_save
 
@@ -24,6 +25,7 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier_ss_decoder import (
 )
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.model.data_loader import DataLoader, write_json
+from SeqEN2.utils.seq_tools import sliding_window
 
 
 class Model:
@@ -260,6 +262,7 @@ class Model:
         # start training loop
         iter_for_test = 0
         iter_for_log = 0
+        # for training
         max_size = max(self.data_loader_cl.train_data_size, self.data_loader_ss.train_data_size)
         for epoch in range(0, epochs):
             for batch in self.get_train_batch_cl_ss(batch_size, max_size=max_size):
@@ -347,14 +350,27 @@ class Model:
         #         self.autoencoder.train_batch(overfit_batch, self.device, input_noise=input_noise)
         #         self.autoencoder.test_batch(overfit_batch, self.device)
 
-    def load_model(self, model_id, map_location):
-        raise NotImplementedError("needs a redo")
-        # version, model_name, run_title = model_id.split(',')          # 0,test,run_title
-        # try:
-        #     model_dir = self.root / 'models' / model_name / 'versions' / run_title
-        #     self.autoencoder.load(model_dir, version, map_location=map_location)
-        #     print('first method is working')
-        # except FileNotFoundError:
-        #     model_dir = Path('/mnt/home/nayebiga/SeqEncoder/SeqEN/models') / model_name / 'versions' / run_title
-        #     self.autoencoder.load(model_dir, version, map_location=map_location)
-        #     print('second method is working')
+    def load_model(self, version, model_id):
+        model_dir = self.root / "models" / self.name / "versions" / version
+        self.autoencoder.load(model_dir, model_id)
+
+    def get_embedding(self, num_test_items=-1):
+        for input_vals, metadata in self.data_loader_cl.get_test_batch(batch_size=num_test_items):
+            embedding, classifier_output, consensus_ss = self.autoencoder.embed_batch(
+                input_vals, self.device
+            )
+            new_df = DataFrame([])
+            new_df.attrs["name"] = metadata["name"]
+            new_df.attrs["seq_ndx"] = input_vals[:, 0]
+            new_df.attrs["trg_act"] = input_vals[:, 1]
+            new_df.attrs["cons_ss"] = consensus_ss
+            new_df["unique_id"] = arange(classifier_output[:, 0].shape[0])
+            new_df["act_pred"] = classifier_output[:, 0]
+            new_df["act_trg"] = sliding_window(input_vals[:, 1].reshape((-1, 1)), self.w).mean(
+                axis=1
+            )
+            new_df["slices"] = (
+                sliding_window(input_vals[:, 0].reshape((-1, 1)), self.w).long().tolist()
+            )
+            new_df["embedding"] = embedding.tolist()
+            yield new_df
