@@ -5,15 +5,14 @@
 __version__ = "0.0.1"
 
 from datetime import datetime
-from os import system
 from os.path import dirname
 from pathlib import Path
 
 import plotly.express as px
-from numpy import array, unique
+from numpy import array, sqrt, unique
 from pandas import concat
 from plotly.offline import plot
-from sklearn.manifold import TSNE, Isomap, SpectralEmbedding
+from sklearn.manifold import TSNE, Isomap
 
 from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import read_json
@@ -64,18 +63,19 @@ class TestSession:
         for item in self.model.get_embedding(num_test_items=num_test_items):
             self.embedding_results[item.attrs["name"]] = item
 
-    def tsne_embeddings(self, dim=2, perplexity=30):
+    def tsne_embeddings(self, dim=2):
         # combine embeddings
         all_embeddings = concat(
             [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
         )
         all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
+        perplexity = sqrt(len(all_embeddings["uid"]))
         model = TSNE(
             n_components=dim,
             learning_rate="auto",
             init="pca",
             perplexity=perplexity,
-            n_iter=100000,
+            n_iter=10000,
             n_jobs=-1,
         )
         X_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
@@ -83,28 +83,17 @@ class TestSession:
             all_embeddings[f"tsne_{i}"] = X_embedded[:, i]
         return all_embeddings
 
-    def isomap_embeddings(self, dim=2, n_neighbors=5):
+    def isomap_embeddings(self, dim=2):
         # combine embeddings
         all_embeddings = concat(
             [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
         )
         all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
+        n_neighbors = int(sqrt(len(all_embeddings["uid"])))
         model = Isomap(n_components=dim, n_neighbors=n_neighbors, n_jobs=-1)
         X_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
         for i in range(dim):
             all_embeddings[f"isomap_{i}"] = X_embedded[:, i]
-        return all_embeddings
-
-    def spectral_embeddings(self, dim=2, n_neighbors=5):
-        # combine embeddings
-        all_embeddings = concat(
-            [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
-        )
-        all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
-        model = SpectralEmbedding(n_components=dim, n_neighbors=n_neighbors, n_jobs=-1)
-        X_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
-        for i in range(dim):
-            all_embeddings[f"spectral_{i}"] = X_embedded[:, i]
         return all_embeddings
 
     def plot_embedding_2d(self, method="tsne"):
@@ -121,63 +110,59 @@ class TestSession:
             filename.mkdir()
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
-            for perplexity in [5, 10, 20, 30, 40, 50]:
-                all_embeddings = self.tsne_embeddings(dim=2, perplexity=perplexity)
-                num_samples = len(unique(all_embeddings["pr"]))
-                fig = px.scatter(
-                    all_embeddings, x="tsne_0", y="tsne_1", color="pr", hover_data=["act_trg"]
-                )
-                html_filename = (
-                    filename / f"{now}_tsne_dim_{2}_p_{perplexity}_color_by_pr_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-                fig = px.scatter(
-                    all_embeddings, x="tsne_0", y="tsne_1", color="act_trg", hover_data=["pr"]
-                )
-                html_filename = (
-                    filename / f"{now}_tsne_dim_{2}_p_{perplexity}_color_by_act_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
+            all_embeddings = self.tsne_embeddings(dim=2)
+            num_samples = len(unique(all_embeddings["pr"]))
+            fig = px.scatter(
+                all_embeddings,
+                x="tsne_0",
+                y="tsne_1",
+                color="pr",
+                hover_data=["act_trg", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_tsne_dim_{2}_color_by_pr_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            fig = px.scatter(
+                all_embeddings,
+                x="tsne_0",
+                y="tsne_1",
+                color="act_trg",
+                hover_data=["pr", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_tsne_dim_{2}_color_by_act_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            datafile = filename / f"{now}_tsne_dim_{2}.pkl.bz2"
+            all_embeddings.to_pickle(datafile)
+            print(datetime.now() - t1)
+            t1 = datetime.now()
         elif method == "isomap":
-            for n_neighbors in [5, 10, 20, 50]:
-                all_embeddings = self.isomap_embeddings(dim=2, n_neighbors=n_neighbors)
-                num_samples = len(unique(all_embeddings["pr"]))
-                fig = px.scatter(
-                    all_embeddings, x="isomap_0", y="isomap_1", color="pr", hover_data=["act_trg"]
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_isomap_dim_{2}_neighbors_{n_neighbors}_color_by_pr_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-                fig = px.scatter(
-                    all_embeddings, x="isomap_0", y="isomap_1", color="act_trg", hover_data=["pr"]
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_isomap_dim_{2}_neighbors_{n_neighbors}_color_by_act_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-        elif method == "spectral":
-            for n_neighbors in [None, 5, 10, 20, 50]:
-                all_embeddings = self.spectral_embeddings(dim=2, n_neighbors=n_neighbors)
-                num_samples = len(unique(all_embeddings["pr"]))
-                fig = px.scatter(
-                    all_embeddings, x="spectral_0", y="isomap_1", color="pr", hover_data=["act_trg"]
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_spectral_dim_{2}_neighbors_{n_neighbors}_color_by_pr_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-                fig = px.scatter(
-                    all_embeddings, x="spectral_0", y="isomap_1", color="act_trg", hover_data=["pr"]
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_spectral_dim_{2}_neighbors_{n_neighbors}_color_by_act_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
+            all_embeddings = self.isomap_embeddings(dim=2)
+            num_samples = len(unique(all_embeddings["pr"]))
+            fig = px.scatter(
+                all_embeddings,
+                x="isomap_0",
+                y="isomap_1",
+                color="pr",
+                hover_data=["act_trg", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_isomap_dim_{2}_color_by_pr_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            fig = px.scatter(
+                all_embeddings,
+                x="isomap_0",
+                y="isomap_1",
+                color="act_trg",
+                hover_data=["pr", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_isomap_dim_{2}_color_by_act_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            datafile = filename / f"{now}_isomap_dim_{2}.pkl.bz2"
+            all_embeddings.to_pickle(datafile)
+            print(datetime.now() - t1)
+            t1 = datetime.now()
         print(datetime.now() - t1)
 
     def plot_embedding_3d(self, method="tsne"):
@@ -194,83 +179,64 @@ class TestSession:
             filename.mkdir()
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
-            for perplexity in [5, 10, 20, 30, 40, 50]:
-                all_embeddings = self.tsne_embeddings(dim=3, perplexity=perplexity)
-                num_samples = len(unique(all_embeddings["pr"]))
-                fig = px.scatter_3d(
-                    all_embeddings,
-                    x="tsne_0",
-                    y="tsne_1",
-                    z="tsne_2",
-                    color="pr",
-                    hover_data=["act_trg"],
-                )
-                html_filename = (
-                    filename / f"{now}_tsne_dim_{3}_p_{perplexity}_color_by_pr_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-                fig = px.scatter_3d(
-                    all_embeddings,
-                    x="tsne_0",
-                    y="tsne_1",
-                    z="tsne_2",
-                    color="act_trg",
-                    hover_data=["pr"],
-                )
-                html_filename = (
-                    filename / f"{now}_tsne_dim_{3}_p_{perplexity}_color_by_act_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
+            all_embeddings = self.tsne_embeddings(dim=3)
+            num_samples = len(unique(all_embeddings["pr"]))
+            fig = px.scatter_3d(
+                all_embeddings,
+                x="tsne_0",
+                y="tsne_1",
+                z="tsne_2",
+                color="pr",
+                hover_data=["act_trg", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_tsne_dim_{3}_color_by_pr_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            fig = px.scatter_3d(
+                all_embeddings,
+                x="tsne_0",
+                y="tsne_1",
+                z="tsne_2",
+                color="act_trg",
+                hover_data=["pr", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_tsne_dim_{3}_color_by_act_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            datafile = filename / f"{now}_tsne_dim_{3}.pkl.bz2"
+            all_embeddings.to_pickle(datafile)
+            print(datetime.now() - t1)
+            t1 = datetime.now()
+
         elif method == "isomap":
-            for n_neighbors in [5, 10, 20, 50]:
-                all_embeddings = self.isomap_embeddings(dim=2, n_neighbors=n_neighbors)
-                num_samples = len(unique(all_embeddings["pr"]))
-                fig = px.scatter_3d(
-                    all_embeddings,
-                    x="isomap_0",
-                    y="isomap_1",
-                    z="isomap_2",
-                    color="pr",
-                    hover_data=["act_trg"],
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_isomap_dim_{3}_neighbors_{n_neighbors}_color_by_pr_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-                fig = px.scatter_3d(
-                    all_embeddings,
-                    x="isomap_0",
-                    y="isomap_1",
-                    z="isomap_2",
-                    color="act_trg",
-                    hover_data=["pr"],
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_isomap_dim_{3}_neighbors_{n_neighbors}_color_by_act_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-        elif method == "spectral":
-            for n_neighbors in [None, 5, 10, 20, 50]:
-                all_embeddings = self.spectral_embeddings(dim=2, n_neighbors=n_neighbors)
-                num_samples = len(unique(all_embeddings["pr"]))
-                fig = px.scatter(
-                    all_embeddings, x="spectral_0", y="isomap_1", color="pr", hover_data=["act_trg"]
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_spectral_dim_{2}_neighbors_{n_neighbors}_color_by_pr_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
-                fig = px.scatter(
-                    all_embeddings, x="spectral_0", y="isomap_1", color="act_trg", hover_data=["pr"]
-                )
-                html_filename = (
-                    filename
-                    / f"{now}_spectral_dim_{2}_neighbors_{n_neighbors}_color_by_act_{num_samples}.html"
-                )
-                plot(fig, filename=str(html_filename), auto_open=False)
+            all_embeddings = self.isomap_embeddings(dim=3)
+            num_samples = len(unique(all_embeddings["pr"]))
+            fig = px.scatter_3d(
+                all_embeddings,
+                x="isomap_0",
+                y="isomap_1",
+                z="isomap_2",
+                color="pr",
+                hover_data=["act_trg", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_isomap_dim_{3}_color_by_pr_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            fig = px.scatter_3d(
+                all_embeddings,
+                x="isomap_0",
+                y="isomap_1",
+                z="isomap_2",
+                color="act_trg",
+                hover_data=["pr", "slices"],
+                size="act_pred",
+            )
+            html_filename = filename / f"{now}_isomap_dim_{3}_color_by_act_{num_samples}.html"
+            plot(fig, filename=str(html_filename), auto_open=False)
+            datafile = filename / f"{now}_isomap_dim_{3}.pkl.bz2"
+            all_embeddings.to_pickle(datafile)
+            print(datetime.now() - t1)
+            t1 = datetime.now()
         print(datetime.now() - t1)
         # python ./SeqEN2/sessions/test_session.py -n dummy -mv 202201222143_AAECSS_arch7 -mid 0 -dcl kegg_ndx_ACTp_100 -a arch7 -teb 100 -ge -tsne 2
 
@@ -307,11 +273,6 @@ def main(args):
                 test_session.plot_embedding_2d(method="isomap")
             elif args["Isomap dim"] == 3:
                 test_session.plot_embedding_3d(method="isomap")
-        if args["Spectral dim"]:
-            if args["Spectral dim"] == 2:
-                test_session.plot_embedding_2d(method="spectral")
-            elif args["Spectral dim"] == 3:
-                test_session.plot_embedding_3d(method="spectral")
 
 
 if __name__ == "__main__":
