@@ -61,6 +61,7 @@ class TrainingParams(NoneRefersDefault):
 @nested_deco
 class AETrainingSettings(NoneRefersDefault):
     reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    continuity: TrainingParams = DefaultVal(TrainingParams()).val
 
 
 @dataclass_json(undefined=Undefined.RAISE)
