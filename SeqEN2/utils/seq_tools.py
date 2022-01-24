@@ -4,7 +4,8 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
-from torch import diagonal, eye, fliplr, index_select, mode, tensor
+from torch import Tensor, diagonal, empty, eye, fliplr, index_select, mode, tensor
+from torch.nn.functional import unfold
 
 
 def consensus(output, ndx, device):
@@ -39,13 +40,35 @@ def get_seq(ndx, ndx_windows):
     # add comment
 
 
+def get_consensus_seq(seq, device):
+    output_length, w = seq.shape
+    seq_length = output_length + w - 1
+    output = empty((seq_length), device=device)
+    for i in range(seq_length):
+        output[i] = consensus(seq, i, device=device)
+    return output
+
+
 def consensus_acc(seq, output, device):
     output_length, w = output.shape
     seq_length = output_length + w - 1
     n = 0
-    consensus_seq = []
+    consensus_seq = empty((seq_length), device=device)
     for i in range(seq_length):
-        consensus_seq.append(consensus(output, i, device=device))
+        consensus_seq[i] = consensus(output, i, device=device)
         if get_seq(i, seq).item() == consensus_seq[-1]:
             n += 1
     return n / len(seq), consensus_seq
+
+
+def sliding_window(input_vals, w):
+    assert isinstance(input_vals, Tensor)
+    assert input_vals.shape[1] == 1, "input shape must be (-1, 1)"
+    kernel_size = (input_vals.shape[1], w)
+    input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
+    input_ndx = input_vals[:, :w]
+    return input_ndx
+
+
+# def seq_to_ndx(seq):
+#     aa_keys = "WYFMILVAGPSTCEDQNHRK*"
