@@ -7,16 +7,15 @@ __version__ = "0.0.1"
 from typing import Dict
 
 from numpy.random import choice
-from torch import Tensor, argmax
+from torch import Tensor, argmax, cat
 from torch import load as torch_load
 from torch import no_grad, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
 from torch import tensor, transpose
-from torch.nn import Module, NLLLoss
+from torch.nn import Module, MSELoss, NLLLoss
 from torch.nn.functional import one_hot, unfold
 
-import wandb
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.model.data_loader import write_json
 from SeqEN2.utils.custom_dataclasses import AETrainingSettings
@@ -47,8 +46,11 @@ class Autoencoder(Module):
         # define customized optimizers
         self.reconstructor_optimizer = None
         self.reconstructor_lr_scheduler = None
+        self.continuity_optimizer = None
+        self.continuity_lr_scheduler = None
         # Loss functions
         self.criterion_NLLLoss = NLLLoss()
+        self.criterion_MSELoss = MSELoss()
         # logger
         self.logs = {}
 
@@ -87,6 +89,11 @@ class Autoencoder(Module):
     def forward_test(self, one_hot_input):
         return self.forward_encoder_decoder(one_hot_input)
 
+    def forward_embed(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        return encoded
+
     def save(self, model_dir, epoch):
         torch_save(self.vectorizer, model_dir / f"vectorizer_{epoch}.m")
         torch_save(self.encoder, model_dir / f"encoder_{epoch}.m")
@@ -123,6 +130,20 @@ class Autoencoder(Module):
             factor=self._training_settings.reconstructor.factor,
             patience=self._training_settings.reconstructor.patience,
             min_lr=self._training_settings.reconstructor.min_lr,
+        )
+        # define customized optimizers
+        self.continuity_optimizer = optim.SGD(
+            [
+                {"params": self.vectorizer.parameters()},
+                {"params": self.encoder.parameters()},
+            ],
+            lr=self._training_settings.continuity.lr,
+        )
+        self.continuity_lr_scheduler = CustomLRScheduler(
+            self.continuity_optimizer,
+            factor=self._training_settings.continuity.factor,
+            patience=self._training_settings.continuity.patience,
+            min_lr=self._training_settings.continuity.min_lr,
         )
 
     def initialize_for_training(self, training_settings=None):
@@ -175,11 +196,29 @@ class Autoencoder(Module):
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        # train for continuity
+        self.continuity_optimizer.zero_grad()
+        encoded_output = self.forward_embed(one_hot_input)
+        continuity_loss_r = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        )
+        continuity_loss_l = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        )
+        continuity_loss = continuity_loss_r + continuity_loss_l
+        continuity_loss.backward()
+        self.continuity_optimizer.step()
+        self.log("continuity_loss", continuity_loss.item())
+        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
+        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+        self.continuity_lr_scheduler.step(continuity_loss.item())
         # clean up
         del input_ndx
         del one_hot_input
         del reconstructor_loss
         del reconstructor_output
+        del encoded_output
+        del continuity_loss
 
     def test_batch(self, input_vals, device):
         """

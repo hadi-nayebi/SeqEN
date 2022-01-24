@@ -6,7 +6,7 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from torch import argmax
+from torch import argmax, cat
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
@@ -131,6 +131,22 @@ class AdversarialAutoencoder(Autoencoder):
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        # train for continuity
+        self.continuity_optimizer.zero_grad()
+        encoded_output = self.forward_embed(one_hot_input)
+        continuity_loss_r = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        )
+        continuity_loss_l = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        )
+        continuity_loss = continuity_loss_r + continuity_loss_l
+        continuity_loss.backward()
+        self.continuity_optimizer.step()
+        self.log("continuity_loss", continuity_loss.item())
+        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
+        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+        self.continuity_lr_scheduler.step(continuity_loss.item())
         # train generator
         self.generator_optimizer.zero_grad()
         generator_output = self.forward_generator(one_hot_input)
@@ -168,6 +184,8 @@ class AdversarialAutoencoder(Autoencoder):
         del generator_loss
         del discriminator_output
         del discriminator_loss
+        del encoded_output
+        del continuity_loss
 
     def test_batch(self, input_vals, device, input_noise=0.0):
         """
@@ -184,10 +202,6 @@ class AdversarialAutoencoder(Autoencoder):
             reconstructor_loss = self.criterion_NLLLoss(
                 reconstructor_output, input_ndx.reshape((-1,))
             )
-            generator_loss = self.criterion_NLLLoss(
-                generator_output,
-                zeros((generator_output.shape[0],), device=device).long(),
-            )
             # reconstructor acc
             reconstructor_ndx = argmax(reconstructor_output, dim=1)
             reconstructor_accuracy = (
@@ -199,7 +213,6 @@ class AdversarialAutoencoder(Autoencoder):
             )
             # reconstruction_loss, discriminator_loss, classifier_loss
             self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_generator_loss", generator_loss.item())
             self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
             self.log("test_consensus_accuracy", consensus_seq_acc)
             # clean up
@@ -208,4 +221,3 @@ class AdversarialAutoencoder(Autoencoder):
             del reconstructor_output
             del generator_output
             del reconstructor_loss
-            del generator_loss

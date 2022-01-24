@@ -15,7 +15,6 @@ from torch import sum as torch_sum
 from torch import tensor, transpose, zeros
 from torch.nn.functional import one_hot, unfold
 
-import wandb
 from SeqEN2.autoencoder.adversarial_autoencoder_classifier import (
     AdversarialAutoencoderClassifier,
 )
@@ -75,7 +74,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
         return devectorized, discriminator_output, classifier_output, ss_decoder_output
 
-    def forward_embed(self, one_hot_input):
+    def forward_eval_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         classifier_output = self.classifier(encoded)
@@ -176,6 +175,22 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        # train for continuity
+        self.continuity_optimizer.zero_grad()
+        encoded_output = self.forward_embed(one_hot_input)
+        continuity_loss_r = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        )
+        continuity_loss_l = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        )
+        continuity_loss = continuity_loss_r + continuity_loss_l
+        continuity_loss.backward()
+        self.continuity_optimizer.step()
+        self.log("continuity_loss", continuity_loss.item())
+        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
+        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+        self.continuity_lr_scheduler.step(continuity_loss.item())
         # train generator
         self.generator_optimizer.zero_grad()
         generator_output = self.forward_generator(one_hot_input)
@@ -223,6 +238,8 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         del discriminator_loss
         del classifier_output
         del classifier_loss
+        del encoded_output
+        del continuity_loss
         # training with ss data
         input_ndx, target_vals, one_hot_input = self.transform_input_ss(
             input_vals["ss"], device, input_noise=input_noise
@@ -237,6 +254,22 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        # train for continuity
+        self.continuity_optimizer.zero_grad()
+        encoded_output = self.forward_embed(one_hot_input)
+        continuity_loss_r = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        )
+        continuity_loss_l = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        )
+        continuity_loss = continuity_loss_r + continuity_loss_l
+        continuity_loss.backward()
+        self.continuity_optimizer.step()
+        self.log("continuity_loss", continuity_loss.item())
+        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
+        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+        self.continuity_lr_scheduler.step(continuity_loss.item())
         # train encoder_SS_decoder
         self.ss_decoder_optimizer.zero_grad()
         ss_decoder_output = self.forward_ss_decoder(one_hot_input)
@@ -284,6 +317,8 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         del discriminator_loss
         del ss_decoder_output
         del ss_decoder_loss
+        del encoded_output
+        del continuity_loss
 
     def test_batch(self, input_vals, device, input_noise=0.0):
         """
@@ -309,10 +344,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             reconstructor_loss = self.criterion_NLLLoss(
                 reconstructor_output, input_ndx.reshape((-1,))
             )
-            generator_loss = self.criterion_NLLLoss(
-                generator_output,
-                zeros((generator_output.shape[0],), device=device).long(),
-            )
             classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
             # reconstructor acc
             reconstructor_ndx = argmax(reconstructor_output, dim=1)
@@ -325,7 +356,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             )
             # reconstruction_loss, discriminator_loss, classifier_loss
             self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_generator_loss", generator_loss.item())
             self.log("test_classifier_loss", classifier_loss.item())
             self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
             self.log("test_consensus_accuracy", consensus_seq_acc)
@@ -334,7 +364,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             del generator_output
             del classifier_output
             del reconstructor_loss
-            del generator_loss
             del target_vals
             del classifier_loss
             # testing with ss data
@@ -349,10 +378,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             ) = self.forward_test(one_hot_input)
             reconstructor_loss = self.criterion_NLLLoss(
                 reconstructor_output, input_ndx.reshape((-1,))
-            )
-            generator_loss = self.criterion_NLLLoss(
-                generator_output,
-                zeros((generator_output.shape[0],), device=device).long(),
             )
             ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
             # reconstructor acc
@@ -374,7 +399,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             )
             # reconstruction_loss, discriminator_loss, classifier_loss
             self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_generator_loss", generator_loss.item())
             self.log("test_ss_decoder_loss", ss_decoder_loss.item())
             self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
             self.log("test_consensus_accuracy", consensus_seq_acc)
@@ -385,7 +409,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             del generator_output
             del classifier_output
             del reconstructor_loss
-            del generator_loss
             del target_vals
             del ss_decoder_loss
 
@@ -406,7 +429,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 embedding,
                 classifier_output,
                 ss_decoder_output,
-            ) = self.forward_embed(one_hot_input)
+            ) = self.forward_eval_embed(one_hot_input)
             consensus_ss = get_consensus_seq(
                 argmax(ss_decoder_output, dim=1).reshape((-1, self.w)), device
             )
