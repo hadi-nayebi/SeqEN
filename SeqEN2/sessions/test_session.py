@@ -130,7 +130,7 @@ class TestSession:
                 html_filename = (
                     filename / f"{now}_tsne_dim_{dim}_p_{perplexity}_color_by_pr_{num_samples}.html"
                 )
-                plot(fig, filename=str(html_filename))
+                plot(fig, filename=str(html_filename), auto_open=False)
                 fig = px.scatter(
                     all_embeddings, x="tsne_0", y="tsne_1", color="act_trg", hover_data=["pr"]
                 )
@@ -138,7 +138,7 @@ class TestSession:
                     filename
                     / f"{now}_tsne_dim_{dim}_p_{perplexity}_color_by_act_{num_samples}.html"
                 )
-                plot(fig, filename=str(html_filename))
+                plot(fig, filename=str(html_filename), auto_open=False)
         elif method == "isomap":
             for n_neighbors in [5, 10, 20, 50]:
                 all_embeddings = self.isomap_embeddings(dim=dim, n_neighbors=n_neighbors)
@@ -150,7 +150,7 @@ class TestSession:
                     filename
                     / f"{now}_isomap_dim_{dim}_neighbors_{n_neighbors}_color_by_pr_{num_samples}.html"
                 )
-                plot(fig, filename=str(html_filename))
+                plot(fig, filename=str(html_filename), auto_open=False)
                 fig = px.scatter(
                     all_embeddings, x="isomap_0", y="isomap_1", color="act_trg", hover_data=["pr"]
                 )
@@ -158,7 +158,7 @@ class TestSession:
                     filename
                     / f"{now}_isomap_dim_{dim}_neighbors_{n_neighbors}_color_by_act_{num_samples}.html"
                 )
-                plot(fig, filename=str(html_filename))
+                plot(fig, filename=str(html_filename), auto_open=False)
         elif method == "spectral":
             for n_neighbors in [None, 5, 10, 20, 50]:
                 all_embeddings = self.spectral_embeddings(dim=dim, n_neighbors=n_neighbors)
@@ -170,7 +170,7 @@ class TestSession:
                     filename
                     / f"{now}_spectral_dim_{dim}_neighbors_{n_neighbors}_color_by_pr_{num_samples}.html"
                 )
-                plot(fig, filename=str(html_filename))
+                plot(fig, filename=str(html_filename), auto_open=False)
                 fig = px.scatter(
                     all_embeddings, x="spectral_0", y="isomap_1", color="act_trg", hover_data=["pr"]
                 )
@@ -178,7 +178,7 @@ class TestSession:
                     filename
                     / f"{now}_spectral_dim_{dim}_neighbors_{n_neighbors}_color_by_act_{num_samples}.html"
                 )
-                plot(fig, filename=str(html_filename))
+                plot(fig, filename=str(html_filename), auto_open=False)
         print(datetime.now() - t1)
         # python ./SeqEN2/sessions/test_session.py -n dummy -mv 202201222143_AAECSS_arch7 -mid 0 -dcl kegg_ndx_ACTp_100 -a arch7 -teb 100 -ge -tsne 2
 
