@@ -77,7 +77,7 @@ class TestSession:
             learning_rate="auto",
             init="pca",
             perplexity=perplexity,
-            n_iter=1000,
+            n_iter=10000,
             n_jobs=-1,
         )
         X_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
