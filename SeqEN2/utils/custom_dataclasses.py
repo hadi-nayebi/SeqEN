@@ -51,10 +51,10 @@ def nested_deco(*args, **kwargs):
 @dataclass_json(undefined=Undefined.RAISE)
 @dataclass
 class TrainingParams(NoneRefersDefault):
-    lr: float = DefaultVal(0.01)
-    factor: float = DefaultVal(0.95)
-    patience: float = DefaultVal(10000)
-    min_lr: float = DefaultVal(0.0001)
+    lr: float = DefaultVal(0.1)
+    factor: float = DefaultVal(0.99)
+    patience: float = DefaultVal(1000)
+    min_lr: float = DefaultVal(0.001)
 
 
 @dataclass_json(undefined=Undefined.RAISE)
