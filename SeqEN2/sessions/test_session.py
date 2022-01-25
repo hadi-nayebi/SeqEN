@@ -134,8 +134,6 @@ class TestSession:
             plot(fig, filename=str(html_filename), auto_open=False)
             datafile = filename / f"{now}_tsne_dim_{2}.pkl.bz2"
             all_embeddings.to_pickle(datafile)
-            print(datetime.now() - t1)
-            t1 = datetime.now()
         elif method == "isomap":
             all_embeddings = self.isomap_embeddings(dim=2)
             num_samples = len(unique(all_embeddings["pr"]))
@@ -161,8 +159,6 @@ class TestSession:
             plot(fig, filename=str(html_filename), auto_open=False)
             datafile = filename / f"{now}_isomap_dim_{2}.pkl.bz2"
             all_embeddings.to_pickle(datafile)
-            print(datetime.now() - t1)
-            t1 = datetime.now()
         print(datetime.now() - t1)
 
     def plot_embedding_3d(self, method="tsne"):
