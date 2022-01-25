@@ -79,10 +79,16 @@ class Autoencoder(Module):
             str(train_dir / "training_settings.json"),
         )
 
-    def load_training_settings(self, train_dir):
-        new_training_setting = train_dir / "update_training_settings.json"
-        if new_training_setting.exists():
-            self.training_settings = read_json(str(new_training_setting))
+    def update_training_settings(self, train_dir):
+        new_training_setting_path = train_dir / "update_training_settings.json"
+        if new_training_setting_path.exists():
+            new_training_setting = read_json(str(new_training_setting_path))
+            new_training_setting_dict = {}
+            if new_training_setting["apply"]:
+                for key, item in self.training_settings.to_dict().items():
+                    if item["lr"] < new_training_setting[key]["lr"]:
+                        new_training_setting_dict[key] = new_training_setting[key]["params"]
+            self.training_settings = new_training_setting_dict
             self.initialize_training_components()
 
     def forward_encoder_decoder(self, one_hot_input):

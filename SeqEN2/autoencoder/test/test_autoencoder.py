@@ -134,6 +134,12 @@ class TestAutoencoder(TestCase):
         self.assertEqual((str(filepath), filepath.is_file()), (str(filepath), True))
         system(f"rm {str(filepath)}")
 
+    def test_update_training_settings(self):
+        train_dir = self.root / "config" / "train_params"
+        print(self.autoencoder.training_settings.to_dict())
+        self.autoencoder.update_training_settings(train_dir)
+        print(self.autoencoder.training_settings.to_dict())
+
 
 if __name__ == "__main__":
     unittest_main()
