@@ -113,14 +113,14 @@ class TestSession:
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
             all_embeddings = self.tsne_embeddings(dim=2)
-            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
+            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter(
                 all_embeddings,
                 x="tsne_0",
                 y="tsne_1",
                 color="pr",
-                hover_data=["act_trg", "slices"],
+                hover_data=["act_trg", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_tsne_dim_{2}_color_by_pr_{num_samples}.html"
@@ -130,7 +130,7 @@ class TestSession:
                 x="tsne_0",
                 y="tsne_1",
                 color="act_trg",
-                hover_data=["pr", "slices"],
+                hover_data=["pr", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_tsne_dim_{2}_color_by_act_{num_samples}.html"
@@ -139,14 +139,14 @@ class TestSession:
             all_embeddings.to_pickle(datafile)
         elif method == "isomap":
             all_embeddings = self.isomap_embeddings(dim=2)
-            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
+            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter(
                 all_embeddings,
                 x="isomap_0",
                 y="isomap_1",
                 color="pr",
-                hover_data=["act_trg", "slices"],
+                hover_data=["act_trg", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_isomap_dim_{2}_color_by_pr_{num_samples}.html"
@@ -156,7 +156,7 @@ class TestSession:
                 x="isomap_0",
                 y="isomap_1",
                 color="act_trg",
-                hover_data=["pr", "slices"],
+                hover_data=["pr", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_isomap_dim_{2}_color_by_act_{num_samples}.html"
@@ -180,7 +180,7 @@ class TestSession:
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
             all_embeddings = self.tsne_embeddings(dim=3)
-            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
+            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter_3d(
                 all_embeddings,
@@ -188,7 +188,7 @@ class TestSession:
                 y="tsne_1",
                 z="tsne_2",
                 color="pr",
-                hover_data=["act_trg", "slices"],
+                hover_data=["act_trg", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_tsne_dim_{3}_color_by_pr_{num_samples}.html"
@@ -199,7 +199,7 @@ class TestSession:
                 y="tsne_1",
                 z="tsne_2",
                 color="act_trg",
-                hover_data=["pr", "slices"],
+                hover_data=["pr", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_tsne_dim_{3}_color_by_act_{num_samples}.html"
@@ -211,7 +211,7 @@ class TestSession:
 
         elif method == "isomap":
             all_embeddings = self.isomap_embeddings(dim=3)
-            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
+            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter_3d(
                 all_embeddings,
@@ -219,7 +219,7 @@ class TestSession:
                 y="isomap_1",
                 z="isomap_2",
                 color="pr",
-                hover_data=["act_trg", "slices"],
+                hover_data=["act_trg", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_isomap_dim_{3}_color_by_pr_{num_samples}.html"
@@ -230,7 +230,7 @@ class TestSession:
                 y="isomap_1",
                 z="isomap_2",
                 color="act_trg",
-                hover_data=["pr", "slices"],
+                hover_data=["pr", "act_pred", "slices"],
                 size="size",
             )
             html_filename = filename / f"{now}_isomap_dim_{3}_color_by_act_{num_samples}.html"
