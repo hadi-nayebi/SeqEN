@@ -81,7 +81,7 @@ class Autoencoder(Module):
 
     def load_training_settings(self, train_dir):
         new_training_setting = train_dir / "update_training_settings.json"
-        if new_training_setting.exist():
+        if new_training_setting.exists():
             self.training_settings = read_json(str(new_training_setting))
             self.initialize_training_components()
 
