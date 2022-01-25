@@ -1,5 +1,5 @@
 {
-        "apply": true,
+        "apply": false,
         "reconstructor": {
                 "lr": 0.01,
                 "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
