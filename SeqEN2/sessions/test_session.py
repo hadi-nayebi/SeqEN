@@ -19,6 +19,8 @@ from SeqEN2.model.data_loader import read_json
 from SeqEN2.model.model import Model
 from SeqEN2.utils.custom_arg_parser import TestSessionArgParser
 
+MIN_SPOT_SIZE = 0.01
+
 
 class TestSession:
 
@@ -111,7 +113,7 @@ class TestSession:
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
             all_embeddings = self.tsne_embeddings(dim=2)
-            all_embeddings["size"] = 0.1 + all_embeddings["act_pred"]
+            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter(
                 all_embeddings,
@@ -137,7 +139,7 @@ class TestSession:
             all_embeddings.to_pickle(datafile)
         elif method == "isomap":
             all_embeddings = self.isomap_embeddings(dim=2)
-            all_embeddings["size"] = 0.1 + all_embeddings["act_pred"]
+            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter(
                 all_embeddings,
@@ -178,7 +180,7 @@ class TestSession:
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
             all_embeddings = self.tsne_embeddings(dim=3)
-            all_embeddings["size"] = 0.1 + all_embeddings["act_pred"]
+            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter_3d(
                 all_embeddings,
@@ -209,7 +211,7 @@ class TestSession:
 
         elif method == "isomap":
             all_embeddings = self.isomap_embeddings(dim=3)
-            all_embeddings["size"] = 0.1 + all_embeddings["act_pred"]
+            all_embeddings["size"] = MIN_SPOT_SIZE + all_embeddings["act_pred"]
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter_3d(
                 all_embeddings,
