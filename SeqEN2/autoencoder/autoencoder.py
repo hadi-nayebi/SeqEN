@@ -17,7 +17,7 @@ from torch.nn import Module, MSELoss, NLLLoss
 from torch.nn.functional import one_hot, unfold
 
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
-from SeqEN2.model.data_loader import write_json
+from SeqEN2.model.data_loader import read_json, write_json
 from SeqEN2.utils.custom_dataclasses import AETrainingSettings
 from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
@@ -78,6 +78,12 @@ class Autoencoder(Module):
             self.training_settings.to_dict(),
             str(train_dir / "training_settings.json"),
         )
+
+    def load_training_settings(self, train_dir):
+        new_training_setting = train_dir / "update_training_settings.json"
+        if new_training_setting.exist():
+            self.training_settings = read_json(str(new_training_setting))
+            self.initialize_training_components()
 
     def forward_encoder_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))

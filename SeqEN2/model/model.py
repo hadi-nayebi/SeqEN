@@ -236,6 +236,7 @@ class Model:
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
             self.store_model(model, train_dir, epoch)
+            self.autoencoder.load_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
     def test_AAEC(self, num_test_items=1):
@@ -264,7 +265,9 @@ class Model:
         iter_for_log = 0
         # for training
         max_size = max(self.data_loader_cl.train_data_size, self.data_loader_ss.train_data_size)
+
         for epoch in range(0, epochs):
+
             for batch in self.get_train_batch_cl_ss(batch_size, max_size=max_size):
                 self.autoencoder.train_batch(batch, self.device, input_noise=input_noise)
                 iter_for_test += 1
@@ -275,6 +278,7 @@ class Model:
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
             self.store_model(model, train_dir, epoch)
+            self.autoencoder.load_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
     def test_AAECSS_cl_ss(self, num_test_items=1):
@@ -321,6 +325,7 @@ class Model:
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
             self.store_model(model, train_dir, epoch)
+            self.autoencoder.load_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
     def test_AAECSS_clss(self, num_test_items=1):
