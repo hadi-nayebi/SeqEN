@@ -105,8 +105,7 @@ class Model:
         is_testing=False,
     ):
         assert self.data_loader_cl is not None, "at least dataset0 must be provided"
-        if self.data_loader_ss is None and self.data_loader_clss is None:
-            assert self.autoencoder.arch.type in ["AE", "AAE", "AAEC"], "wrong model type."
+        if self.autoencoder.arch.type in ["AE", "AAE", "AAEC"]:
             self.train_AAEC(
                 epochs=epochs,
                 batch_size=batch_size,
@@ -116,8 +115,8 @@ class Model:
                 log_every=log_every,
                 is_testing=is_testing,
             )
-        else:
-            assert self.autoencoder.arch.type == "AAECSS"
+        elif self.autoencoder.arch.type == "AAECSS":
+            assert self.data_loader_ss is not None, "both -dcl and -dss must be passed"
             if self.data_loader_clss is None:
                 self.train_AAECSS_cl_ss(
                     epochs=epochs,
@@ -129,6 +128,7 @@ class Model:
                     is_testing=is_testing,
                 )
             else:
+                assert self.data_loader_clss is not None, "all -dcl, -dss and -dclss must be passed"
                 self.train_AAECSS_clss(
                     epochs=epochs,
                     batch_size=batch_size,
