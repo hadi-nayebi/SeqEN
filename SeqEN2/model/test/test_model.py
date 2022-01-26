@@ -13,7 +13,10 @@ from SeqEN2.sessions.train_session import TrainSession
 class TestModel(TestCase):
     """Test items for Model class"""
 
-    pass
+    def test_initialize_training(self):
+        train_session = TrainSession()
+        train_session.add_model("dummy", "arch7")
+        train_session.model.initialize_training()
 
 
 if __name__ == "__main__":

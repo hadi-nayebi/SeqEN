@@ -194,6 +194,13 @@ class Model:
         self.config.model_type = model_type
         self.config.arch = arch_name
         wandb.watch(self.autoencoder)
+        ### quick fix
+        update_setting_file_original = (
+            self.root / "config" / "train_params" / "update_training_settings.json"
+        )
+        update_setting_file = train_dir / "update_training_settings.json"
+        system(f"cp {str(update_setting_file_original)} {str(update_setting_file)}")
+        ###
         return train_dir
 
     def store_model(self, model, train_dir, epoch):
