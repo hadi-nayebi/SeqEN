@@ -67,7 +67,9 @@ class TrainSessionArgParser(DefaultParser):
             "-ti", "--test_interval", type=int, help="Test Interval", default=100
         )
         self.parser.add_argument("-no", "--noise", type=float, help="Input Noise", default=0.0)
-        self.parser.add_argument("-mid", "--model_id", type=str, help="Model ID", default="")
+        self.parser.add_argument(
+            "-mvid", "--model_version_id", type=str, help="Model Version ID", default=""
+        )
         self.parser.add_argument(
             "-ts", "--training_settings", type=str, help="Training Settings", default=None
         )

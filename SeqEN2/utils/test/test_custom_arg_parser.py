@@ -79,7 +79,7 @@ class TestCustomArgParser(TestCase):
             "Test Batch": 1,
             "Test Interval": 100,
             "Input Noise": 0.0,
-            "Model ID": "",
+            "Model Version ID": "",
             "Training Settings": None,
             "No Train": False,
             "Is Testing": False,
