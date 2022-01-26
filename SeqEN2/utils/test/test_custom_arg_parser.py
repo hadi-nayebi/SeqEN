@@ -74,7 +74,6 @@ class TestCustomArgParser(TestCase):
             "D1": 8,
             "Dn": 10,
             "W": 20,
-            "Learning Rate": 0.01,
             "Epochs": 25,
             "Train Batch": 128,
             "Test Batch": 1,
