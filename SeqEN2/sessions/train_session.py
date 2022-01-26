@@ -111,8 +111,9 @@ def main(args):
         train_session.load_data("ss", args["Dataset_ss"])
     if args["Dataset_clss"] != "":
         train_session.load_data("clss", args["Dataset_clss"])
-    # if args['Model ID'] != '':
-    #     session.model.load_model(args['Model ID'], map_location=get_map_location())
+    if args["Model Version ID"] != "":
+        version, model_id = args["Model Version ID"].split("#")
+        train_session.model.load_model(version, model_id)
     if args["Overfitting"]:
         train_session.overfit_tests(
             epochs=args["Epochs"],
