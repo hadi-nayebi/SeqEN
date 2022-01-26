@@ -15,10 +15,10 @@ class TestCustomDataclasses(TestCase):
     def test_training_params(self):
         # defaults
         tp = TrainingParams()
-        self.assertEqual(0.01, tp.lr, "The default value for learning rate is wrong.")
-        self.assertEqual(0.9, tp.factor, "The default value for factor is wrong.")
-        self.assertEqual(10000, tp.patience, "The default value for patience is wrong.")
-        self.assertEqual(0.00001, tp.min_lr, "The default value for min lr is wrong.")
+        self.assertEqual(0.1, tp.lr, "The default value for learning rate is wrong.")
+        self.assertEqual(0.99, tp.factor, "The default value for factor is wrong.")
+        self.assertEqual(1000, tp.patience, "The default value for patience is wrong.")
+        self.assertEqual(0.001, tp.min_lr, "The default value for min lr is wrong.")
         # assignments
         tp = TrainingParams(lr=0.1, factor=0.8, patience=100, min_lr=0.01)
         self.assertEqual(0.1, tp.lr, "Value assignment for learning rate is wrong.")
@@ -38,7 +38,7 @@ class TestCustomDataclasses(TestCase):
         self.assertEqual(
             0.1, ae_ts.reconstructor.lr, "Value assignment for learning rate is wrong."
         )
-        self.assertEqual(0.9, ae_ts.reconstructor.factor, "Value assignment for factor is wrong.")
+        self.assertEqual(0.99, ae_ts.reconstructor.factor, "Value assignment for factor is wrong.")
 
     def test_aae_training_settings(self):
         # defaults
@@ -56,7 +56,7 @@ class TestCustomDataclasses(TestCase):
         self.assertEqual(
             0.1, aae_ts.discriminator.min_lr, "Value assignment for learning rate is wrong."
         )
-        self.assertEqual(0.9, aae_ts.generator.factor, "Value assignment for factor is wrong.")
+        self.assertEqual(0.99, aae_ts.generator.factor, "Value assignment for factor is wrong.")
 
     def test_aaec_training_settings(self):
         # defaults
