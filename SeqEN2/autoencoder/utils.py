@@ -105,11 +105,11 @@ class CustomLRScheduler(optim.lr_scheduler.ReduceLROnPlateau):
     CustomLRScheduler adds get_last_lr method to ReduceLROnPlateau class
     """
 
+    optimizer = None
+
     def __init__(self, *args, **kwargs):
         super(CustomLRScheduler, self).__init__(*args, **kwargs)
-        self._last_lr = None
+        self._last_lr = [group["lr"] for group in self.optimizer.param_groups]
 
-    def get_last_lr(self, default=0.01):
-        if self._last_lr is None:
-            return default
+    def get_last_lr(self):
         return self._last_lr[0]
