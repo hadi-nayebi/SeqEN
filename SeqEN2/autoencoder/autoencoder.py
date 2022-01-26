@@ -88,6 +88,8 @@ class Autoencoder(Module):
                 for key, item in self.training_settings.to_dict().items():
                     if item["lr"] < new_training_setting[key]["lr"]:
                         new_training_setting_dict[key] = new_training_setting[key]["params"]
+                    else:
+                        new_training_setting_dict[key] = item
                 self.training_settings = new_training_setting_dict
                 self.initialize_training_components()
 

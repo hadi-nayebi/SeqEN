@@ -268,9 +268,7 @@ class Model:
         iter_for_log = 0
         # for training
         max_size = max(self.data_loader_cl.train_data_size, self.data_loader_ss.train_data_size)
-
         for epoch in range(0, epochs):
-
             for batch in self.get_train_batch_cl_ss(batch_size, max_size=max_size):
                 self.autoencoder.train_batch(batch, self.device, input_noise=input_noise)
                 iter_for_test += 1
