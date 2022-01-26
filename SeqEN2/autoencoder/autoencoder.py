@@ -90,8 +90,7 @@ class Autoencoder(Module):
                         new_training_setting_dict[key] = new_training_setting[key]["params"]
                     else:
                         new_training_setting_dict[key] = item
-                self.training_settings = new_training_setting_dict
-                self.initialize_training_components()
+                self.initialize_for_training(training_settings=new_training_setting_dict)
 
     def forward_encoder_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -183,10 +182,7 @@ class Autoencoder(Module):
 
     def log(self, key, value):
         if key in self.logs.keys():
-            if "LR" in key:
-                self.logs[key] = [value]
-            else:
-                self.logs[key].append(value)
+            self.logs[key].append(value)
         else:
             self.logs[key] = [value]
 
