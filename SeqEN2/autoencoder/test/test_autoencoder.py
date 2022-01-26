@@ -137,6 +137,7 @@ class TestAutoencoder(TestCase):
 
     def test_update_training_settings(self):
         self.autoencoder.training_settings = AETrainingSettings()
+        print(self.autoencoder.training_settings)
         train_dir = self.root / "config" / "train_params"
         self.autoencoder.update_training_settings(train_dir)
         print(self.autoencoder.training_settings)

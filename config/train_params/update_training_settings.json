@@ -1,7 +1,7 @@
 {
         "apply": true,
         "reconstructor": {
-                "lr": 0.01,
+                "lr": 0.11,
                 "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
         },
         "generator": {

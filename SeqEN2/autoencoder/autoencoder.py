@@ -181,7 +181,10 @@ class Autoencoder(Module):
 
     def log(self, key, value):
         if key in self.logs.keys():
-            self.logs[key].append(value)
+            if "LR" in key:
+                self.logs[key] = [value]
+            else:
+                self.logs[key].append(value)
         else:
             self.logs[key] = [value]
 

@@ -161,8 +161,11 @@ class Model:
     def log_it(self, iter, epoch):
         wandb.log({"epoch": epoch, "iter": iter})
         for key, item in self.autoencoder.logs.items():
-            wandb.log({key: wandb.Histogram(item)})
-            wandb.log({f"{key}_mean": mean(item)})
+            if "LR" in key:
+                wandb.log({f"{key}": mean(item)})
+            else:
+                wandb.log({key: wandb.Histogram(item)})
+                wandb.log({f"{key}_mean": mean(item)})
         self.autoencoder.reset_log()
 
     def initialize_training(
