@@ -60,9 +60,6 @@ class TrainSessionArgParser(DefaultParser):
         self.parser.add_argument("-d1", "--d1", type=int, help="D1", default=8)
         self.parser.add_argument("-dn", "--dn", type=int, help="Dn", default=10)
         self.parser.add_argument("-w", "--w", type=int, help="W", default=20)
-        self.parser.add_argument(
-            "-lr", "--learning_rate", type=float, help="Learning Rate", default=0.01
-        )
         self.parser.add_argument("-e", "--epochs", type=int, help="Epochs", default=25)
         self.parser.add_argument("-trb", "--train_batch", type=int, help="Train Batch", default=128)
         self.parser.add_argument("-teb", "--test_batch", type=int, help="Test Batch", default=1)
@@ -72,7 +69,7 @@ class TrainSessionArgParser(DefaultParser):
         self.parser.add_argument("-no", "--noise", type=float, help="Input Noise", default=0.0)
         self.parser.add_argument("-mid", "--model_id", type=str, help="Model ID", default="")
         self.parser.add_argument(
-            "-tp", "--training_settings", type=str, help="Training Settings", default=None
+            "-ts", "--training_settings", type=str, help="Training Settings", default=None
         )
         self.parser.add_argument(
             "-nt", "--no_train", help="No Train", action="store_true", default=False
