@@ -226,8 +226,8 @@ class Model:
     def finalize_training(self, train_dir, is_testing=False):
         if is_testing:
             system(f"rm -r {train_dir}")
-        else:
-            system(f"mv {str(train_dir)} {str(train_dir)}_done")
+        # else:
+        #     system(f"mv {str(train_dir)} {str(train_dir)}_done")
 
     def train_AAEC(
         self,
