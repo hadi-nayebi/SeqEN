@@ -56,7 +56,7 @@ def consensus_acc(seq, output, device):
     consensus_seq = empty(seq_length, device=device)
     for i in range(seq_length):
         consensus_seq[i] = consensus(output, i, device=device)
-        if get_seq(i, seq).item() == consensus_seq[-1]:
+        if get_seq(i, seq).item() == consensus_seq[i]:
             n += 1
     return n / len(seq), consensus_seq
 
