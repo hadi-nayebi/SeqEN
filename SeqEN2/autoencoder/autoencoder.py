@@ -13,7 +13,7 @@ from torch import no_grad, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
 from torch import tensor, transpose
-from torch.nn import Module, MSELoss, NLLLoss
+from torch.nn import CrossEntropyLoss, Module, MSELoss, NLLLoss
 from torch.nn.functional import one_hot, unfold
 
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
@@ -49,7 +49,7 @@ class Autoencoder(Module):
         self.continuity_optimizer = None
         self.continuity_lr_scheduler = None
         # Loss functions
-        self.criterion_NLLLoss = NLLLoss()
+        self.criterion_NLLLoss = CrossEntropyLoss()
         self.criterion_MSELoss = MSELoss()
         # logger
         self.logs = {}
