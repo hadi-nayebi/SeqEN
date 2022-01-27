@@ -6,6 +6,7 @@ __version__ = "0.0.1"
 
 
 from datetime import datetime
+from glob import glob
 from os import system
 from os.path import dirname
 from pathlib import Path
@@ -103,6 +104,7 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
+        now=None,
     ):
         assert self.data_loader_cl is not None, "at least dataset0 must be provided"
         if self.autoencoder.arch.type in ["AE", "AAE", "AAEC"]:
@@ -114,6 +116,7 @@ class Model:
                 input_noise=input_noise,
                 log_every=log_every,
                 is_testing=is_testing,
+                now=now,
             )
         elif self.autoencoder.arch.type == "AAECSS":
             assert self.data_loader_ss is not None, "both -dcl and -dss must be passed"
@@ -126,6 +129,7 @@ class Model:
                     input_noise=input_noise,
                     log_every=log_every,
                     is_testing=is_testing,
+                    now=now,
                 )
             else:
                 assert self.data_loader_clss is not None, "all -dcl, -dss and -dclss must be passed"
@@ -137,6 +141,7 @@ class Model:
                     input_noise=input_noise,
                     log_every=log_every,
                     is_testing=is_testing,
+                    now=now,
                 )
 
     def get_train_batch_cl(self, batch_size):
@@ -173,17 +178,22 @@ class Model:
         batch_size=128,
         training_settings=None,
         input_noise=0.0,
+        now=None,
     ):
-        now = datetime.now().strftime("%Y%m%d%H%M")
+        if now is None:
+            now = datetime.now().strftime("%Y%m%d%H%M")
         model_type = self.autoencoder.arch.type
         arch_name = self.autoencoder.arch.name
         run_title = f"{now}_{model_type}_{arch_name}"
         train_dir = self.versions_path / f"{run_title}"
-        assert (
-            not train_dir.exists()
-        ), "This directory already exist, choose a different title for the run!"
-        train_dir.mkdir()
+        if not train_dir.exists():
+            train_dir.mkdir()
+            start_epoch = 0
+        else:
+            files = glob(str(train_dir) + "/epoch_*.model")
+            start_epoch = len(files)
         # connect to wandb
+        run_title = f"{now}_{model_type}_{arch_name}"
         wandb.init(project=self.name, name=run_title)
         self.config = wandb.config
         self.config.batch_size = batch_size
@@ -201,7 +211,7 @@ class Model:
         update_setting_file = train_dir / "update_training_settings.json"
         system(f"cp {str(update_setting_file_original)} {str(update_setting_file)}")
         ###
-        return train_dir
+        return train_dir, start_epoch
 
     def store_model(self, model, train_dir, epoch):
         model_path = str(train_dir / f"epoch_{epoch}.model")
@@ -225,17 +235,19 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
+        now=None,
     ):
-        train_dir = self.initialize_training(
+        train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
+            now=now,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
         iter_for_test = 0
         iter_for_log = 0
-        for epoch in range(0, epochs):
+        for epoch in range(start_epoch, start_epoch + epochs):
             for batch in self.get_train_batch_cl(batch_size):
                 self.autoencoder.train_batch(batch, self.device, input_noise=input_noise)
                 iter_for_test += 1
@@ -263,11 +275,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
+        now=None,
     ):
-        train_dir = self.initialize_training(
+        train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
+            now=now,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
@@ -275,7 +289,7 @@ class Model:
         iter_for_log = 0
         # for training
         max_size = max(self.data_loader_cl.train_data_size, self.data_loader_ss.train_data_size)
-        for epoch in range(0, epochs):
+        for epoch in range(start_epoch, start_epoch + epochs):
             for batch in self.get_train_batch_cl_ss(batch_size, max_size=max_size):
                 self.autoencoder.train_batch(batch, self.device, input_noise=input_noise)
                 iter_for_test += 1
@@ -307,11 +321,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
+        now=None,
     ):
-        train_dir = self.initialize_training(
+        train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
+            now=now,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
@@ -322,7 +338,7 @@ class Model:
             self.data_loader_ss.train_data_size,
             self.data_loader_clss.train_data_size,
         )
-        for epoch in range(0, epochs):
+        for epoch in range(start_epoch, start_epoch + epochs):
             for batch in self.get_train_batch_clss(batch_size, max_size=max_size):
                 self.autoencoder.train_batch(batch, self.device, input_noise=input_noise)
                 iter_for_test += 1

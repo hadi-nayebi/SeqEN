@@ -53,10 +53,13 @@ class TrainSession:
 
     def load_training_settings(self, training_settings=None) -> Dict:
         if training_settings is not None:
-            if not isinstance(training_settings, str):
-                raise TypeError(f"expected str, received {type(training_settings)}")
-            training_settings_path = self.train_params_dir / f"{training_settings}.json"
-            training_settings = read_json(str(training_settings_path))
+            if isinstance(training_settings, Path):
+                training_settings = read_json(str(training_settings))
+            elif isinstance(training_settings, str):
+                training_settings_path = self.train_params_dir / f"{training_settings}.json"
+                training_settings = read_json(str(training_settings_path))
+            else:
+                raise TypeError("Train setting must be str or Path-like object")
         return training_settings
 
     def train(
@@ -67,11 +70,12 @@ class TrainSession:
         training_settings=None,
         input_noise=0.0,
         log_every=100,
+        now=None,
     ):
+        training_settings = self.load_training_settings(training_settings)
         if self.is_testing:
             # add more default setting for is_testing
             epochs = 1
-        training_settings = self.load_training_settings(training_settings)
         self.model.train(
             epochs=epochs,
             batch_size=batch_size,
@@ -80,6 +84,7 @@ class TrainSession:
             input_noise=input_noise,
             log_every=log_every,
             is_testing=self.is_testing,
+            now=now,
         )
 
     def test(self, num_test_items=1):
@@ -106,6 +111,8 @@ def main(args):
         w=args["W"],
     )
     # load datafiles
+    now = None
+    training_settings = args["Training Settings"]
     train_session.load_data("cl", args["Dataset_cl"])
     if args["Dataset_ss"] != "":
         train_session.load_data("ss", args["Dataset_ss"])
@@ -114,6 +121,8 @@ def main(args):
     if args["Model Version ID"] != "":
         version, model_id = args["Model Version ID"].split("#")
         train_session.model.load_model(version, model_id)
+        now = version.split("_")[0]
+        training_settings = train_session.model.versions_path / version / "training_settings.json"
     if args["Overfitting"]:
         train_session.overfit_tests(
             epochs=args["Epochs"],
@@ -128,9 +137,10 @@ def main(args):
             epochs=args["Epochs"],
             batch_size=args["Train Batch"],
             test_interval=args["Test Interval"],
-            training_settings=args["Training Settings"],
+            training_settings=training_settings,
             input_noise=args["Input Noise"],
             log_every=args["Log every"],
+            now=now,
         )
 
 
