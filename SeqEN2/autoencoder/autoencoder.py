@@ -49,7 +49,7 @@ class Autoencoder(Module):
         self.continuity_optimizer = None
         self.continuity_lr_scheduler = None
         # Loss functions
-        self.criterion_NLLLoss = CrossEntropyLoss()
+        self.criterion_NLLLoss = NLLLoss()
         self.criterion_MSELoss = MSELoss()
         # logger
         self.logs = {}
