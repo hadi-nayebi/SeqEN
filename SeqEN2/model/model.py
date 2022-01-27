@@ -78,7 +78,7 @@ class Model:
         :return:
         """
         # load datafiles
-        assert key in ["cl", "ss", "clss"], "unknown key for dataset"
+        assert key in ["cl", "ss", "clss"], "unktimestampn key for dataset"
         if key == "cl":
             self.data_loader_cl = DataLoader()
             self.data_loader_cl.load_test_data(dataset_name, self.device)
@@ -104,7 +104,7 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        now=None,
+        timestamp=None,
     ):
         assert self.data_loader_cl is not None, "at least dataset0 must be provided"
         if self.autoencoder.arch.type in ["AE", "AAE", "AAEC"]:
@@ -116,7 +116,7 @@ class Model:
                 input_noise=input_noise,
                 log_every=log_every,
                 is_testing=is_testing,
-                now=now,
+                timestamp=timestamp,
             )
         elif self.autoencoder.arch.type == "AAECSS":
             assert self.data_loader_ss is not None, "both -dcl and -dss must be passed"
@@ -129,7 +129,7 @@ class Model:
                     input_noise=input_noise,
                     log_every=log_every,
                     is_testing=is_testing,
-                    now=now,
+                    timestamp=timestamp,
                 )
             else:
                 assert self.data_loader_clss is not None, "all -dcl, -dss and -dclss must be passed"
@@ -141,7 +141,7 @@ class Model:
                     input_noise=input_noise,
                     log_every=log_every,
                     is_testing=is_testing,
-                    now=now,
+                    timestamp=timestamp,
                 )
 
     def get_train_batch_cl(self, batch_size):
@@ -178,13 +178,13 @@ class Model:
         batch_size=128,
         training_settings=None,
         input_noise=0.0,
-        now=None,
+        timestamp=None,
     ):
-        if now is None:
-            now = datetime.now().strftime("%Y%m%d%H%M")
+        if timestamp is None:
+            timestamp = datetime.now().strftime("%Y%m%d%H%M")
         model_type = self.autoencoder.arch.type
         arch_name = self.autoencoder.arch.name
-        run_title = f"{now}_{model_type}_{arch_name}"
+        run_title = f"{timestamp}_{model_type}_{arch_name}"
         train_dir = self.versions_path / f"{run_title}"
         if not train_dir.exists():
             train_dir.mkdir()
@@ -193,23 +193,26 @@ class Model:
             files = glob(str(train_dir) + "/epoch_*.model")
             start_epoch = len(files)
         # connect to wandb
-        run_title = f"{now}_{model_type}_{arch_name}"
+        run_title = f"{timestamp}_{model_type}_{arch_name}"
         wandb.init(project=self.name, name=run_title)
         self.config = wandb.config
         self.config.batch_size = batch_size
         self.config.input_noise = input_noise
         self.config.dataset_name_cl = self.dataset_name_cl
+        self.config.dataset_name_ss = self.dataset_name_ss
+        self.config.dataset_name_clss = self.dataset_name_clss
         self.autoencoder.initialize_for_training(training_settings=training_settings)
         self.config.training_settings = self.autoencoder.training_settings.to_dict()
         self.config.model_type = model_type
         self.config.arch = arch_name
         wandb.watch(self.autoencoder)
         ### quick fix
-        update_setting_file_original = (
-            self.root / "config" / "train_params" / "update_training_settings.json"
-        )
         update_setting_file = train_dir / "update_training_settings.json"
-        system(f"cp {str(update_setting_file_original)} {str(update_setting_file)}")
+        if not update_setting_file.exists():
+            update_setting_file_original = (
+                self.root / "config" / "train_params" / "update_training_settings.json"
+            )
+            system(f"cp {str(update_setting_file_original)} {str(update_setting_file)}")
         ###
         return train_dir, start_epoch
 
@@ -235,13 +238,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        now=None,
+        timestamp=None,
     ):
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
-            now=now,
+            timestamp=timestamp,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
@@ -275,13 +278,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        now=None,
+        timestamp=None,
     ):
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
-            now=now,
+            timestamp=timestamp,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
@@ -321,13 +324,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        now=None,
+        timestamp=None,
     ):
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
-            now=now,
+            timestamp=timestamp,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
