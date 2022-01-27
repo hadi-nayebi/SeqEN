@@ -104,7 +104,7 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        timestamp=None,
+        mvid=None,
     ):
         assert self.data_loader_cl is not None, "at least dataset0 must be provided"
         if self.autoencoder.arch.type in ["AE", "AAE", "AAEC"]:
@@ -116,7 +116,7 @@ class Model:
                 input_noise=input_noise,
                 log_every=log_every,
                 is_testing=is_testing,
-                timestamp=timestamp,
+                mvid=mvid,
             )
         elif self.autoencoder.arch.type == "AAECSS":
             assert self.data_loader_ss is not None, "both -dcl and -dss must be passed"
@@ -129,7 +129,7 @@ class Model:
                     input_noise=input_noise,
                     log_every=log_every,
                     is_testing=is_testing,
-                    timestamp=timestamp,
+                    mvid=mvid,
                 )
             else:
                 assert self.data_loader_clss is not None, "all -dcl, -dss and -dclss must be passed"
@@ -141,7 +141,7 @@ class Model:
                     input_noise=input_noise,
                     log_every=log_every,
                     is_testing=is_testing,
-                    timestamp=timestamp,
+                    mvid=mvid,
                 )
 
     def get_train_batch_cl(self, batch_size):
@@ -178,10 +178,12 @@ class Model:
         batch_size=128,
         training_settings=None,
         input_noise=0.0,
-        timestamp=None,
+        mvid=None,
     ):
-        if timestamp is None:
+        if mvid is None:
             timestamp = datetime.now().strftime("%Y%m%d%H%M")
+        else:
+            timestamp = mvid[0]
         model_type = self.autoencoder.arch.type
         arch_name = self.autoencoder.arch.name
         run_title = f"{timestamp}_{model_type}_{arch_name}"
@@ -190,8 +192,7 @@ class Model:
             train_dir.mkdir()
             start_epoch = 0
         else:
-            files = glob(str(train_dir) + "/epoch_*.model")
-            start_epoch = len(files)
+            start_epoch = int(mvid[1]) + 1
         # connect to wandb
         run_title = f"{timestamp}_{model_type}_{arch_name}"
         wandb.init(project=self.name, name=run_title)

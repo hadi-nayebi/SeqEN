@@ -70,7 +70,7 @@ class TrainSession:
         training_settings=None,
         input_noise=0.0,
         log_every=100,
-        timestamp=None,
+        mvid=None,
     ):
         training_settings = self.load_training_settings(training_settings)
         if self.is_testing:
@@ -84,7 +84,7 @@ class TrainSession:
             input_noise=input_noise,
             log_every=log_every,
             is_testing=self.is_testing,
-            timestamp=timestamp,
+            mvid=mvid,
         )
 
     def test(self, num_test_items=1):
@@ -111,7 +111,7 @@ def main(args):
         w=args["W"],
     )
     # load datafiles
-    timestamp = None
+    mvid = None
     training_settings = args["Training Settings"]
     train_session.load_data("cl", args["Dataset_cl"])
     if args["Dataset_ss"] != "":
@@ -121,7 +121,7 @@ def main(args):
     if args["Model Version ID"] != "" and args["Model Version ID"] != "x":
         version, model_id = args["Model Version ID"].split("#")
         train_session.model.load_model(version, model_id)
-        timestamp = version.split("_")[0]
+        mvid = [version.split("_")[0]] + [model_id]
         training_settings = train_session.model.versions_path / version / "training_settings.json"
     if args["Overfitting"]:
         train_session.overfit_tests(
@@ -140,7 +140,7 @@ def main(args):
             training_settings=training_settings,
             input_noise=args["Input Noise"],
             log_every=args["Log every"],
-            timestamp=timestamp,
+            mvid=mvid,
         )
 
 
