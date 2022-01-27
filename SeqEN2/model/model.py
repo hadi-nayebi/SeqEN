@@ -25,7 +25,7 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier_ss_decoder import (
     AdversarialAutoencoderClassifierSSDecoder,
 )
 from SeqEN2.autoencoder.autoencoder import Autoencoder
-from SeqEN2.model.data_loader import DataLoader, write_json
+from SeqEN2.model.data_loader import DataLoader
 from SeqEN2.utils.seq_tools import sliding_window
 
 
@@ -78,7 +78,7 @@ class Model:
         :return:
         """
         # load datafiles
-        assert key in ["cl", "ss", "clss"], "unktimestampn key for dataset"
+        assert key in ["cl", "ss", "clss"], "unknown key for dataset"
         if key == "cl":
             self.data_loader_cl = DataLoader()
             self.data_loader_cl.load_test_data(dataset_name, self.device)
@@ -108,7 +108,7 @@ class Model:
     ):
         assert self.data_loader_cl is not None, "at least dataset0 must be provided"
         if self.autoencoder.arch.type in ["AE", "AAE", "AAEC"]:
-            self.train_AAEC(
+            self.train_aaec(
                 epochs=epochs,
                 batch_size=batch_size,
                 test_interval=test_interval,
@@ -121,7 +121,7 @@ class Model:
         elif self.autoencoder.arch.type == "AAECSS":
             assert self.data_loader_ss is not None, "both -dcl and -dss must be passed"
             if self.data_loader_clss is None:
-                self.train_AAECSS_cl_ss(
+                self.train_aaecss_cl_ss(
                     epochs=epochs,
                     batch_size=batch_size,
                     test_interval=test_interval,
@@ -133,7 +133,7 @@ class Model:
                 )
             else:
                 assert self.data_loader_clss is not None, "all -dcl, -dss and -dclss must be passed"
-                self.train_AAECSS_clss(
+                self.train_aaecss_clss(
                     epochs=epochs,
                     batch_size=batch_size,
                     test_interval=test_interval,
@@ -163,8 +163,8 @@ class Model:
         ):
             yield {"cl": batch_cl, "ss": batch_ss, "clss": batch_clss}
 
-    def log_it(self, iter, epoch):
-        wandb.log({"epoch": epoch, "iter": iter})
+    def log_it(self, counter, epoch):
+        wandb.log({"epoch": epoch, "iter": counter})
         for key, item in self.autoencoder.logs.items():
             if "LR" in key:
                 wandb.log({f"{key}": mean(item)})
@@ -206,14 +206,14 @@ class Model:
         self.config.model_type = model_type
         self.config.arch = arch_name
         wandb.watch(self.autoencoder)
-        ### quick fix
+        # quick fix
         update_setting_file = train_dir / "update_training_settings.json"
         if not update_setting_file.exists():
             update_setting_file_original = (
                 self.root / "config" / "train_params" / "update_training_settings.json"
             )
             system(f"cp {str(update_setting_file_original)} {str(update_setting_file)}")
-        ###
+        #
         return train_dir, start_epoch
 
     def store_model(self, model, train_dir, epoch):
@@ -223,13 +223,14 @@ class Model:
         self.autoencoder.save(train_dir, epoch)
         self.autoencoder.save_training_settings(train_dir)
 
-    def finalize_training(self, train_dir, is_testing=False):
+    @staticmethod
+    def finalize_training(train_dir, is_testing=False):
         if is_testing:
             system(f"rm -r {train_dir}")
         # else:
         #     system(f"mv {str(train_dir)} {str(train_dir)}_done")
 
-    def train_AAEC(
+    def train_aaec(
         self,
         epochs=10,
         batch_size=128,
@@ -257,19 +258,19 @@ class Model:
                 iter_for_log += 1
                 if iter_for_test == test_interval:
                     iter_for_test = 0
-                    self.test_AAEC()
+                    self.test_aaec()
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
             self.store_model(model, train_dir, epoch)
             self.autoencoder.update_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
-    def test_AAEC(self, num_test_items=1):
+    def test_aaec(self, num_test_items=1):
         for test_batch, metadata in self.data_loader_cl.get_test_batch(batch_size=num_test_items):
             # using metadata?
             self.autoencoder.test_batch(test_batch, self.device)
 
-    def train_AAECSS_cl_ss(
+    def train_aaecss_cl_ss(
         self,
         epochs=10,
         batch_size=128,
@@ -299,14 +300,14 @@ class Model:
                 iter_for_log += 1
                 if iter_for_test == test_interval:
                     iter_for_test = 0
-                    self.test_AAECSS_cl_ss()
+                    self.test_aaecss_cl_ss()
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
             self.store_model(model, train_dir, epoch)
             self.autoencoder.update_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
-    def test_AAECSS_cl_ss(self, num_test_items=1):
+    def test_aaecss_cl_ss(self, num_test_items=1):
         for (batch_cl, metadata_cl), (batch_ss, metadata_ss) in zip(
             self.data_loader_cl.get_test_batch(batch_size=num_test_items),
             self.data_loader_ss.get_test_batch(batch_size=num_test_items),
@@ -315,7 +316,7 @@ class Model:
             test_batch = {"cl": batch_cl, "ss": batch_ss}
             self.autoencoder.test_batch(test_batch, self.device)
 
-    def train_AAECSS_clss(
+    def train_aaecss_clss(
         self,
         epochs=10,
         batch_size=128,
@@ -348,14 +349,14 @@ class Model:
                 iter_for_log += 1
                 if iter_for_test == test_interval:
                     iter_for_test = 0
-                    self.test_AAECSS_clss()
+                    self.test_aaecss_clss()
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
             self.store_model(model, train_dir, epoch)
             self.autoencoder.update_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
-    def test_AAECSS_clss(self, num_test_items=1):
+    def test_aaecss_clss(self, num_test_items=1):
         for batch_cl, batch_ss, batch_clss in zip(
             self.data_loader_cl.get_test_batch(batch_size=num_test_items),
             self.data_loader_ss.get_test_batch(batch_size=num_test_items),

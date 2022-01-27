@@ -43,7 +43,7 @@ def get_seq(ndx, ndx_windows):
 def get_consensus_seq(seq, device):
     output_length, w = seq.shape
     seq_length = output_length + w - 1
-    output = empty((seq_length), device=device)
+    output = empty(seq_length, device=device)
     for i in range(seq_length):
         output[i] = consensus(seq, i, device=device)
     return output
@@ -53,7 +53,7 @@ def consensus_acc(seq, output, device):
     output_length, w = output.shape
     seq_length = output_length + w - 1
     n = 0
-    consensus_seq = empty((seq_length), device=device)
+    consensus_seq = empty(seq_length, device=device)
     for i in range(seq_length):
         consensus_seq[i] = consensus(output, i, device=device)
         if get_seq(i, seq).item() == consensus_seq[-1]:

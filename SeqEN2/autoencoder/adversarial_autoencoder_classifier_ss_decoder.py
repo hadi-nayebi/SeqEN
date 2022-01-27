@@ -415,6 +415,8 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
     def embed_batch(self, input_vals, device, input_noise=0.0):
         """
         Test a single batch of data, this will move into autoencoder
+        :param input_noise:
+        :param device:
         :param input_vals:
         :return:
         """
