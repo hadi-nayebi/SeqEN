@@ -118,7 +118,7 @@ def main(args):
         train_session.load_data("ss", args["Dataset_ss"])
     if args["Dataset_clss"] != "":
         train_session.load_data("clss", args["Dataset_clss"])
-    if args["Model Version ID"] != "":
+    if args["Model Version ID"] != "" or args["Model Version ID"] != "x":
         version, model_id = args["Model Version ID"].split("#")
         train_session.model.load_model(version, model_id)
         timestamp = version.split("_")[0]
