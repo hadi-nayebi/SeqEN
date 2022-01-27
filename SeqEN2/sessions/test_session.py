@@ -19,7 +19,7 @@ from SeqEN2.model.data_loader import read_json
 from SeqEN2.model.model import Model
 from SeqEN2.utils.custom_arg_parser import TestSessionArgParser
 
-MIN_SPOT_SIZE = 0.01
+MIN_SPOT_SIZE = 0.05
 
 
 class TestSession:
