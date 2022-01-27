@@ -240,13 +240,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        timestamp=None,
+        mvid=None,
     ):
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
-            timestamp=timestamp,
+            mvid=mvid,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
@@ -280,13 +280,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        timestamp=None,
+        mvid=None,
     ):
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
-            timestamp=timestamp,
+            mvid=mvid,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
@@ -326,13 +326,13 @@ class Model:
         input_noise=0.0,
         log_every=100,
         is_testing=False,
-        timestamp=None,
+        mvid=None,
     ):
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
             input_noise=input_noise,
-            timestamp=timestamp,
+            mvid=mvid,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
