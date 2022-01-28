@@ -137,14 +137,18 @@ class DataLoader(object):
                 [self._train_data[key][0] for key in keys[i * batch_size : (i + 1) * batch_size]]
             )
 
-    def get_test_batch(self, batch_size=1) -> (tensor, dict):
-        if batch_size == -1:
-            batch_size = len(self.test_data_keys)
-        assert batch_size < self.test_data_size, "batch size is bigger than available data."
-        ndx = choice(arange(len(self.test_data_keys)), size=batch_size, replace=False)
-        for i in ndx:
-            key = self.test_data_keys[i]
-            yield self._test_data[key]
+    def get_test_batch(self, batch_size=1, test_items=None) -> (tensor, dict):
+        if test_items is not None:
+            for key in test_items:
+                yield self._test_data[key]
+        else:
+            if batch_size == -1:
+                batch_size = len(self.test_data_keys)
+            assert batch_size <= self.test_data_size, "batch size is bigger than available data."
+            ndx = choice(arange(len(self.test_data_keys)), size=batch_size, replace=False)
+            for i in ndx:
+                key = self.test_data_keys[i]
+                yield self._test_data[key]
 
     def get_test_by_key(self, key) -> (tensor, dict):
         return self._test_data[key]

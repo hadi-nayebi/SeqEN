@@ -19,12 +19,11 @@ from SeqEN2.model.data_loader import read_json
 from SeqEN2.model.model import Model
 from SeqEN2.utils.custom_arg_parser import TestSessionArgParser
 
-MIN_SPOT_SIZE = 0.05
-
 
 class TestSession:
 
     root = Path(dirname(__file__)).parent.parent
+    MIN_SPOT_SIZE = 0.05
 
     def __init__(self):
         # setup dirs
@@ -61,8 +60,8 @@ class TestSession:
     def test(self, num_test_items=-1):
         self.model.test(num_test_items=num_test_items)
 
-    def get_embedding(self, num_test_items=-1):
-        for item in self.model.get_embedding(num_test_items=num_test_items):
+    def get_embedding(self, num_test_items=-1, test_items=None):
+        for item in self.model.get_embedding(num_test_items=num_test_items, test_items=test_items):
             self.embedding_results[item.attrs["name"]] = item
 
     def tsne_embeddings(self, dim=2):
@@ -139,7 +138,7 @@ class TestSession:
             all_embeddings.to_pickle(datafile)
         elif method == "isomap":
             all_embeddings = self.isomap_embeddings(dim=2)
-            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
+            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter(
                 all_embeddings,
@@ -180,7 +179,7 @@ class TestSession:
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
             all_embeddings = self.tsne_embeddings(dim=3)
-            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
+            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter_3d(
                 all_embeddings,

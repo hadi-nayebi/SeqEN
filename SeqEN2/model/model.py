@@ -387,8 +387,10 @@ class Model:
         model_dir = self.root / "models" / self.name / "versions" / version
         self.autoencoder.load(model_dir, model_id)
 
-    def get_embedding(self, num_test_items=-1):
-        for input_vals, metadata in self.data_loader_cl.get_test_batch(batch_size=num_test_items):
+    def get_embedding(self, num_test_items=-1, test_items=None):
+        for input_vals, metadata in self.data_loader_cl.get_test_batch(
+            batch_size=num_test_items, test_items=test_items
+        ):
             embedding, classifier_output, consensus_ss = self.autoencoder.embed_batch(
                 input_vals, self.device
             )
