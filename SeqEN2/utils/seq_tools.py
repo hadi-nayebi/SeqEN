@@ -70,10 +70,11 @@ def sliding_window(input_vals, w, keys=None):
     if keys is not None:
         sliced_seq = []
         for item in input_ndx:
-            sliced_seq.append("".join([keys[i] for i in item.long()]))
+            sliced_seq.append(ndx_to_seq(item, keys))
         return sliced_seq
     return input_ndx
 
 
-# def seq_to_ndx(seq):
-#     aa_keys = "WYFMILVAGPSTCEDQNHRK*"
+def ndx_to_seq(seq, keys):
+    assert isinstance(seq, Tensor)
+    return "".join([keys[i] for i in seq.long()])
