@@ -277,7 +277,7 @@ class Autoencoder(Module):
             del reconstructor_loss
             del reconstructor_output
 
-    def embed_batch(self, input_vals, device, input_noise=0.0):
+    def embed_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_noise:
