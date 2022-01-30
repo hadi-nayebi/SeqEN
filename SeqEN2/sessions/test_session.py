@@ -112,7 +112,7 @@ class TestSession:
         # calculate embeddings and tsne to dim dimensions
         if method == "tsne":
             all_embeddings = self.tsne_embeddings(dim=2)
-            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
+            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter(
                 all_embeddings,
@@ -210,7 +210,7 @@ class TestSession:
 
         elif method == "isomap":
             all_embeddings = self.isomap_embeddings(dim=3)
-            all_embeddings["size"] = all_embeddings["act_pred"] + MIN_SPOT_SIZE
+            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
             num_samples = len(unique(all_embeddings["pr"]))
             fig = px.scatter_3d(
                 all_embeddings,
