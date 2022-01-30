@@ -387,7 +387,10 @@ class Model:
         model_dir = self.root / "models" / self.name / "versions" / version
         self.autoencoder.load(model_dir, model_id)
 
+    # embedding for AAECSS only
     def get_embedding(self, num_test_items=-1, test_items=None):
+        if self.autoencoder.arch.type != "AAECSS":
+            raise NotImplementedError("get_embedding is implemented for AAECSS only.")
         for input_vals, metadata in self.data_loader_cl.get_test_batch(
             batch_size=num_test_items, test_items=test_items
         ):

@@ -9,10 +9,10 @@ from typing import Dict
 from numpy.random import choice
 from torch import Tensor, argmax, cat
 from torch import load as torch_load
-from torch import no_grad, ones, optim, randperm
+from torch import no_grad, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
-from torch import tensor, transpose, zeros
+from torch import tensor, transpose
 from torch.nn.functional import one_hot, unfold
 
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
@@ -68,6 +68,17 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         classifier_output = self.classifier(encoded)
         return devectorized, discriminator_output, classifier_output
 
+    def forward_embed(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        return encoded
+
+    def forward_eval_embed(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        classifier_output = self.classifier(encoded)
+        return encoded, classifier_output
+
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoderClassifier, self).save(model_dir, epoch)
         torch_save(self.classifier, model_dir / f"classifier_{epoch}.m")
@@ -118,6 +129,17 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         else:
             return input_ndx, target_vals, one_hot_input
 
+    def train_for_classifier(self, one_hot_input, target_vals):
+        self.classifier_optimizer.zero_grad()
+        classifier_output = self.forward_classifier(one_hot_input)
+        classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
+        classifier_loss.backward()
+        self.classifier_optimizer.step()
+        self.log("classifier_loss", classifier_loss.item())
+        self.log("classifier_LR", self.classifier_lr_scheduler.get_last_lr())
+        self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
+        self.classifier_lr_scheduler.step(classifier_loss.item())
+
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -131,82 +153,16 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
             input_vals, device, input_noise=input_noise
         )
         # train encoder_decoder
-        self.reconstructor_optimizer.zero_grad()
-        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
-        self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        self.train_for_reconstructor(one_hot_input, input_ndx)
         # train for continuity
-        self.continuity_optimizer.zero_grad()
-        encoded_output = self.forward_embed(one_hot_input)
-        continuity_loss_r = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
-        )
-        continuity_loss_l = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
-        )
-        continuity_loss = continuity_loss_r + continuity_loss_l
-        continuity_loss.backward()
-        self.continuity_optimizer.step()
-        self.log("continuity_loss", continuity_loss.item())
-        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
-        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-        self.continuity_lr_scheduler.step(continuity_loss.item())
-        # train generator
-        self.generator_optimizer.zero_grad()
-        generator_output = self.forward_generator(one_hot_input)
-        generator_loss = self.criterion_NLLLoss(
-            generator_output,
-            zeros((generator_output.shape[0],), device=device).long(),
-        )
-        generator_loss.backward()
-        self.generator_optimizer.step()
-        self.log("generator_loss", generator_loss.item())
-        self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
-        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
-        # train discriminator
-        self.discriminator_optimizer.zero_grad()
-        ndx = randperm(self.w)
-        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
-        discriminator_loss = self.criterion_NLLLoss(
-            discriminator_output,
-            ones((discriminator_output.shape[0],), device=device).long(),
-        )
-        discriminator_loss.backward()
-        self.discriminator_optimizer.step()
-        self.log("discriminator_loss", discriminator_loss.item())
-        self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
-        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
-        gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
-        self.generator_lr_scheduler.step(gen_disc_loss)
-        self.discriminator_lr_scheduler.step(gen_disc_loss)
+        self.train_for_continuity(one_hot_input)
+        # train generator and discriminator
+        self.train_for_generator_discriminator(one_hot_input, device)
         # train classifier
-        self.classifier_optimizer.zero_grad()
-        classifier_output = self.forward_classifier(one_hot_input)
-        classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-        classifier_loss.backward()
-        self.classifier_optimizer.step()
-        self.log("classifier_loss", classifier_loss.item())
-        self.log("classifier_LR", self.classifier_lr_scheduler.get_last_lr())
-        self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
-        self.classifier_lr_scheduler.step(classifier_loss.item())
+        self.train_for_classifier(one_hot_input, target_vals)
         # clean up
         del input_ndx
         del one_hot_input
-        del reconstructor_loss
-        del reconstructor_output
-        del generator_output
-        del generator_loss
-        del discriminator_output
-        del discriminator_loss
-        del classifier_output
-        del classifier_loss
-        del encoded_output
-        del continuity_loss
 
     def test_batch(self, input_vals, device, input_noise=0.0):
         """
@@ -251,3 +207,21 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
             del classifier_output
             del reconstructor_loss
             del classifier_loss
+
+    def embed_batch(self, input_vals, device, input_noise=0.0):
+        """
+        Test a single batch of data, this will move into autoencoder
+        :param input_noise:
+        :param device:
+        :param input_vals:
+        :return:
+        """
+        assert isinstance(input_vals, Tensor), "embed_batch requires a tensor as input_vals"
+        self.eval()
+        with no_grad():
+            # testing with cl data
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
+                input_vals, device, input_noise=input_noise
+            )
+            embedding, classifier_output = self.forward_eval_embed(one_hot_input)
+            return embedding, classifier_output

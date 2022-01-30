@@ -6,8 +6,9 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
+from numpy import empty
 from numpy.random import choice
-from torch import Tensor, argmax, cat
+from torch import Tensor, argmax, flip
 from torch import load as torch_load
 from torch import no_grad, optim, randperm
 from torch import save as torch_save
@@ -107,6 +108,9 @@ class Autoencoder(Module):
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         return encoded
 
+    def forward_eval_embed(self, one_hot_input):
+        return self.forward_embed(one_hot_input)
+
     def save(self, model_dir, epoch):
         torch_save(self.vectorizer, model_dir / f"vectorizer_{epoch}.m")
         torch_save(self.encoder, model_dir / f"encoder_{epoch}.m")
@@ -189,6 +193,40 @@ class Autoencoder(Module):
     def reset_log(self):
         self.logs = {}
 
+    def train_for_continuity(self, one_hot_input):
+        losses = empty((one_hot_input.shape[0] - 1))
+        self.continuity_optimizer.zero_grad()
+        for i in range(one_hot_input.shape[0] - 1):
+            encoded_output = self.forward_embed(one_hot_input[i : i + 2])
+            continuity_loss = self.criterion_MSELoss(
+                encoded_output,
+                flip(
+                    encoded_output,
+                    [
+                        0,
+                    ],
+                ),
+            )
+            continuity_loss.backward()
+            losses[i] = continuity_loss.item()
+        self.continuity_optimizer.step()
+        self.log("continuity_loss_mean", losses.mean())
+        self.log("continuity_loss_std", losses.std())
+        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
+        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+        self.continuity_lr_scheduler.step(losses.mean())
+
+    def train_for_reconstructor(self, one_hot_input, input_ndx):
+        self.reconstructor_optimizer.zero_grad()
+        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
+        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
+        reconstructor_loss.backward()
+        self.reconstructor_optimizer.step()
+        self.log("reconstructor_loss", reconstructor_loss.item())
+        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
+        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -200,38 +238,12 @@ class Autoencoder(Module):
         self.train()
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
         # train encoder_decoder
-        self.reconstructor_optimizer.zero_grad()
-        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
-        self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        self.train_for_reconstructor(one_hot_input, input_ndx)
         # train for continuity
-        self.continuity_optimizer.zero_grad()
-        encoded_output = self.forward_embed(one_hot_input)
-        continuity_loss_r = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
-        )
-        continuity_loss_l = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
-        )
-        continuity_loss = continuity_loss_r + continuity_loss_l
-        continuity_loss.backward()
-        self.continuity_optimizer.step()
-        self.log("continuity_loss", continuity_loss.item())
-        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
-        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-        self.continuity_lr_scheduler.step(continuity_loss.item())
+        self.train_for_continuity(one_hot_input)
         # clean up
         del input_ndx
         del one_hot_input
-        del reconstructor_loss
-        del reconstructor_output
-        del encoded_output
-        del continuity_loss
 
     def test_batch(self, input_vals, device):
         """
@@ -264,3 +276,19 @@ class Autoencoder(Module):
             del one_hot_input
             del reconstructor_loss
             del reconstructor_output
+
+    def embed_batch(self, input_vals, device, input_noise=0.0):
+        """
+        Test a single batch of data, this will move into autoencoder
+        :param input_noise:
+        :param device:
+        :param input_vals:
+        :return:
+        """
+        assert isinstance(input_vals, Tensor), "embed_batch requires a tensor as input_vals"
+        self.eval()
+        with no_grad():
+            # testing with cl data
+            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
+            embedding = self.forward_eval_embed(one_hot_input)
+            return embedding
