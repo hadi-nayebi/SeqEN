@@ -199,8 +199,6 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.train_for_continuity(one_hot_input)
         # train generator and discriminator
         self.train_for_generator_discriminator(one_hot_input, device)
-        # train classifier
-        self.train_for_classifier(one_hot_input, target_vals)
         # train encoder_SS_decoder
         self.train_for_ss_decoder(one_hot_input, target_vals)
 
