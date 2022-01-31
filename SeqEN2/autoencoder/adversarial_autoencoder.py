@@ -6,7 +6,6 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from torch import cat
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
@@ -52,19 +51,22 @@ class AdversarialAutoencoder(Autoencoder):
                 f"Training settings must be a dict or None or type AAETrainingSettings, {type(value)} is passed."
             )
 
-    def forward(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
-        devectorized = self.devectorizer(decoded)
-        generator_output = self.discriminator(encoded)
-        return devectorized, generator_output, encoded
-
-    def forward_discriminator(self, one_hot_input):
+    def forward_generator(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         discriminator_output = self.discriminator(encoded)
         return discriminator_output
+
+    def forward_discriminator(self, one_hot_input):
+        return self.forward_generator(one_hot_input)
+
+    def forward_test(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
+        devectorized = self.devectorizer(decoded)
+        discriminator_output = self.discriminator(encoded)
+        return devectorized, discriminator_output, encoded
 
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoder, self).save(model_dir, epoch)
@@ -105,6 +107,37 @@ class AdversarialAutoencoder(Autoencoder):
             min_lr=self._training_settings.discriminator.min_lr,
         )
 
+    def train_generator_discriminator(self, one_hot_input, device):
+        # train generator
+        self.generator_optimizer.zero_grad()
+        generator_output = self.forward_generator(one_hot_input)
+        generator_loss = self.criterion_NLLLoss(
+            generator_output,
+            zeros((generator_output.shape[0],), device=device).long(),
+        )
+        generator_loss.backward()
+        self.generator_optimizer.step()
+        # train discriminator
+        self.discriminator_optimizer.zero_grad()
+        ndx = randperm(self.w)
+        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
+        discriminator_loss = self.criterion_NLLLoss(
+            discriminator_output,
+            ones((discriminator_output.shape[0],), device=device).long(),
+        )
+        discriminator_loss.backward()
+        self.discriminator_optimizer.step()
+        # loss
+        gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
+        self.generator_lr_scheduler.step(gen_disc_loss)
+        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
+        self.discriminator_lr_scheduler.step(gen_disc_loss)
+        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
+        self.log("generator_loss", generator_loss.item())
+        self.log("generator_LR", self._training_settings.generator.lr)
+        self.log("discriminator_loss", discriminator_loss.item())
+        self.log("discriminator_LR", self._training_settings.discriminator.lr)
+
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -115,78 +148,27 @@ class AdversarialAutoencoder(Autoencoder):
         """
         self.train()
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
-        # forward
-        reconstructor_output, generator_output, encoded_output = self.forward(one_hot_input)
-        # zero_grads
-        self.reconstructor_optimizer.zero_grad()
-        self.continuity_optimizer.zero_grad()
-        self.generator_optimizer.zero_grad()
-        self.discriminator_optimizer.zero_grad()
-        # loss and backward
-        # reconstructor
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward(retain_graph=True)
-        # continuity
-        continuity_loss_r = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
-        )
-        continuity_loss_l = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
-        )
-        continuity_loss = continuity_loss_r + continuity_loss_l
-        continuity_loss.backward(retain_graph=True)
-        # generator
+        # train for continuity
+        self.train_continuity(one_hot_input)
+        # train encoder_decoder
+        self.train_reconstructor(one_hot_input, input_ndx)
+        # train generator and discriminator
+        self.train_generator_discriminator(one_hot_input, device)
+
+    def test_generator_discriminator(self, one_hot_input, generator_output, device):
+        # train generator
         generator_loss = self.criterion_NLLLoss(
             generator_output,
             zeros((generator_output.shape[0],), device=device).long(),
         )
-        generator_loss.backward(retain_graph=True)
-        # discriminator
+        # train discriminator
         ndx = randperm(self.w)
         discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
         discriminator_loss = self.criterion_NLLLoss(
             discriminator_output,
             ones((discriminator_output.shape[0],), device=device).long(),
-        )
-        discriminator_loss.backward()
-        gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
-        # step optimizers
-        self.reconstructor_optimizer.step()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-        self.continuity_optimizer.step()
-        self.continuity_lr_scheduler.step(continuity_loss.item())
-        self.generator_optimizer.step()
-        self.generator_lr_scheduler.step(gen_disc_loss)
-        self.discriminator_optimizer.step()
-        self.discriminator_lr_scheduler.step(gen_disc_loss)
-        # logging
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
-        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self._training_settings.reconstructor.lr)
-        self.log("continuity_loss", continuity_loss.item())
-        self.log("continuity_LR", self.training_settings.continuity.lr)
-        self.log("generator_loss", generator_loss.item())
-        self.log("generator_LR", self._training_settings.generator.lr)
-        self.log("discriminator_loss", discriminator_loss.item())
-        self.log("discriminator_LR", self._training_settings.discriminator.lr)
-
-    def test_for_generator_discriminator(self, one_hot_input, generator_output, device):
-        # test generator
-        generator_loss = self.criterion_NLLLoss(
-            generator_output,
-            zeros((generator_output.shape[0],), device=device).long(),
         )
         self.log("test_generator_loss", generator_loss.item())
-        # test discriminator
-        ndx = randperm(self.w)
-        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
-        discriminator_loss = self.criterion_NLLLoss(
-            discriminator_output,
-            ones((discriminator_output.shape[0],), device=device).long(),
-        )
         self.log("test_discriminator_loss", discriminator_loss.item())
 
     def test_batch(self, input_vals, device):
@@ -198,11 +180,9 @@ class AdversarialAutoencoder(Autoencoder):
         self.eval()
         with no_grad():
             input_ndx, one_hot_input = self.transform_input(input_vals, device)
-            # test
-            reconstructor_output, generator_output, encoded_output = self.forward(one_hot_input)
-            # test for constructor
-            self.test_for_constructor(reconstructor_output, input_ndx, device)
-            # test continuity loss
-            self.test_for_continuity(encoded_output)
-            # test generator and discriminator
-            self.test_for_generator_discriminator(one_hot_input, generator_output, device)
+            (reconstructor_output, generator_output, encoded_output) = self.forward_test(
+                one_hot_input
+            )
+            self.test_continuity(encoded_output)
+            self.test_reconstructor(reconstructor_output, input_ndx, device)
+            self.test_generator_discriminator(one_hot_input, generator_output, device)
