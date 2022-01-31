@@ -412,7 +412,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             del target_vals
             del ss_decoder_loss
 
-    def embed_batch(self, input_vals, device, input_noise=0.0):
+    def embed_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_noise:
@@ -424,9 +424,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.eval()
         with no_grad():
             # testing with cl data
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals, device, input_noise=input_noise
-            )
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
             (
                 embedding,
                 classifier_output,
