@@ -186,32 +186,6 @@ class Autoencoder(Module):
     def reset_log(self):
         self.logs = {}
 
-    def train_for_reconstructor(self, reconstructor_output, input_ndx):
-        self.reconstructor_optimizer.zero_grad()
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward(retain_graph=True)
-        self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-
-    def train_for_continuity(self, encoded_output):
-        self.continuity_optimizer.zero_grad()
-        continuity_loss_r = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
-        )
-        continuity_loss_l = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
-        )
-        continuity_loss = continuity_loss_r + continuity_loss_l
-        continuity_loss.backward(retain_graph=True)
-        self.continuity_optimizer.step()
-        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-        self.continuity_lr_scheduler.step(continuity_loss.item())
-        self.log("continuity_loss", continuity_loss.item())
-        self.log("continuity_LR", self.training_settings.continuity.lr)
-
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -224,10 +198,34 @@ class Autoencoder(Module):
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
         # forward
         reconstructor_output, encoded_output = self.forward(one_hot_input)
-        # train encoder_decoder
-        self.train_for_reconstructor(reconstructor_output, input_ndx)
-        # train for continuity
-        self.train_for_continuity(encoded_output)
+        # zero_grads
+        self.reconstructor_optimizer.zero_grad()
+        self.continuity_optimizer.zero_grad()
+        # loss and backward
+        # reconstructor
+        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
+        reconstructor_loss.backward(retain_graph=True)
+        # continuity
+        continuity_loss_r = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        )
+        continuity_loss_l = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        )
+        continuity_loss = continuity_loss_r + continuity_loss_l
+        continuity_loss.backward()
+        # step optimizers
+        self.reconstructor_optimizer.step()
+        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        self.continuity_optimizer.step()
+        self.continuity_lr_scheduler.step(continuity_loss.item())
+        # logging
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
+        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+        self.log("reconstructor_loss", reconstructor_loss.item())
+        self.log("reconstructor_LR", self._training_settings.reconstructor.lr)
+        self.log("continuity_loss", continuity_loss.item())
+        self.log("continuity_LR", self.training_settings.continuity.lr)
 
     def test_for_constructor(self, reconstructor_output, input_ndx, device):
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
