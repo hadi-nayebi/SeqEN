@@ -320,7 +320,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         del encoded_output
         del continuity_loss
 
-    def test_batch(self, input_vals, device, input_noise=0.0):
+    def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_vals:
@@ -333,7 +333,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         with no_grad():
             # testing with cl data
             input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals["cl"], device, input_noise=input_noise
+                input_vals["cl"], device
             )
             (
                 reconstructor_output,
@@ -368,7 +368,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             del classifier_loss
             # testing with ss data
             input_ndx, target_vals, one_hot_input = self.transform_input_ss(
-                input_vals["ss"], device, input_noise=input_noise
+                input_vals["ss"], device
             )
             (
                 reconstructor_output,

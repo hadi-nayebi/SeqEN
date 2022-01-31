@@ -186,7 +186,7 @@ class AdversarialAutoencoder(Autoencoder):
         del encoded_output
         del continuity_loss
 
-    def test_batch(self, input_vals, device, input_noise=0.0):
+    def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_vals:
@@ -194,9 +194,7 @@ class AdversarialAutoencoder(Autoencoder):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(
-                input_vals, device, input_noise=input_noise
-            )
+            input_ndx, one_hot_input = self.transform_input(input_vals, device)
             (reconstructor_output, generator_output) = self.forward_test(one_hot_input)
             reconstructor_loss = self.criterion_NLLLoss(
                 reconstructor_output, input_ndx.reshape((-1,))

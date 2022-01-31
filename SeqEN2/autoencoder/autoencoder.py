@@ -241,7 +241,7 @@ class Autoencoder(Module):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
+            input_ndx, one_hot_input = self.transform_input(input_vals, device)
             reconstructor_output = self.forward_test(one_hot_input)
             reconstructor_loss = self.criterion_NLLLoss(
                 reconstructor_output, input_ndx.reshape((-1,))
