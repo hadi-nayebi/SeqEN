@@ -4,5 +4,5 @@
         "discriminator": {"lr": 0.1, "factor": 0.99, "patience": 1000, "min_lr": 0.01},
         "classifier": {"lr": 0.1, "factor": 0.99, "patience": 1000, "min_lr": 0.01},
         "ss_decoder": {"lr": 0.1, "factor": 0.99, "patience": 1000, "min_lr": 0.01},
-        "continuity": {"lr": 0.1, "factor": 0.99, "patience": 1000, "min_lr": 0.1}
+        "continuity": {"lr": 0.1, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
 }

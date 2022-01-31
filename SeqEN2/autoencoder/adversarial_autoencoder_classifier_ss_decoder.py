@@ -149,6 +149,25 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         else:
             return input_ndx, target_vals, one_hot_input
 
+    def transform_input_clss(self, input_vals, device, input_noise=0.0):
+        # scans by sliding window of w
+        assert isinstance(input_vals, Tensor)
+        kernel_size = (input_vals.shape[1], self.w)
+        input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
+        input_ndx = input_vals[:, : self.w].long()
+        target_cl = input_vals[:, self.w : -self.w].mean(axis=1).reshape((-1, 1))
+        target_ss = input_vals[:, -self.w :].long()
+        one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
+        if input_noise > 0.0:
+            ndx = randperm(self.w)
+            size = list(one_hot_input.shape)
+            size[-1] = 1
+            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
+            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
+            return input_ndx, target_cl, target_ss, mutated_one_hot
+        else:
+            return input_ndx, target_cl, target_ss, one_hot_input
+
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -333,8 +352,9 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         with no_grad():
             # testing with cl data
             input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals["cl"], device, input_noise=input_noise
+                input_vals["cl"], device
             )
+            # test
             (
                 reconstructor_output,
                 generator_output,
@@ -370,6 +390,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             input_ndx, target_vals, one_hot_input = self.transform_input_ss(
                 input_vals["ss"], device, input_noise=input_noise
             )
+            # test
             (
                 reconstructor_output,
                 generator_output,
@@ -412,21 +433,18 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             del target_vals
             del ss_decoder_loss
 
-    def embed_batch(self, input_vals, device, input_noise=0.0):
+    def embed_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
-        :param input_noise:
         :param device:
         :param input_vals:
         :return:
         """
-        assert isinstance(input_vals, Tensor), "AAECSS requires a tensor as input_vals"
+        assert isinstance(input_vals, Tensor), "embed_batch requires a tensor as input_vals"
         self.eval()
         with no_grad():
             # testing with cl data
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals, device, input_noise=input_noise
-            )
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
             (
                 embedding,
                 classifier_output,
