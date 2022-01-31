@@ -189,7 +189,7 @@ class Autoencoder(Module):
     def train_for_reconstructor(self, reconstructor_output, input_ndx):
         self.reconstructor_optimizer.zero_grad()
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
+        reconstructor_loss.backward(retain_graph=True)
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
@@ -205,7 +205,7 @@ class Autoencoder(Module):
             encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
         )
         continuity_loss = continuity_loss_r + continuity_loss_l
-        continuity_loss.backward()
+        continuity_loss.backward(retain_graph=True)
         self.continuity_optimizer.step()
         self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
         self.continuity_lr_scheduler.step(continuity_loss.item())

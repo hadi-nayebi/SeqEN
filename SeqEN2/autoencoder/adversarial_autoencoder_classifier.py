@@ -119,7 +119,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
     def train_for_classifier(self, classifier_output, target_vals):
         self.classifier_optimizer.zero_grad()
         classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-        classifier_loss.backward()
+        classifier_loss.backward(retain_graph=True)
         self.classifier_optimizer.step()
         self.log("classifier_loss", classifier_loss.item())
         self.log("classifier_LR", self.classifier_lr_scheduler.get_last_lr())

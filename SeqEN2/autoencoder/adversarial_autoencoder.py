@@ -110,7 +110,7 @@ class AdversarialAutoencoder(Autoencoder):
             generator_output,
             zeros((generator_output.shape[0],), device=device).long(),
         )
-        generator_loss.backward()
+        generator_loss.backward(retain_graph=True)
         self.generator_optimizer.step()
         self.log("generator_loss", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
@@ -123,7 +123,7 @@ class AdversarialAutoencoder(Autoencoder):
             discriminator_output,
             ones((discriminator_output.shape[0],), device=device).long(),
         )
-        discriminator_loss.backward()
+        discriminator_loss.backward(retain_graph=True)
         self.discriminator_optimizer.step()
         self.log("discriminator_loss", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
