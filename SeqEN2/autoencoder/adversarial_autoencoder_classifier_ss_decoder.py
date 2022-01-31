@@ -285,7 +285,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             self.test_continuity(encoded_output)
             self.test_reconstructor(reconstructor_output, input_ndx, device)
             self.test_generator_discriminator(one_hot_input, generator_output, device)
-            self.test_ss_decoder(classifier_output, target_vals, device)
+            self.test_ss_decoder(ss_decoder_output, target_vals, device)
             # testing with clss data
             if "clss" in input_vals.keys():
                 input_ndx, target_cl, target_ss, one_hot_input = self.transform_input_clss(
@@ -302,7 +302,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 self.test_reconstructor(reconstructor_output, input_ndx, device)
                 self.test_generator_discriminator(one_hot_input, generator_output, device)
                 self.test_classifier(classifier_output, target_cl)
-                self.test_ss_decoder(classifier_output, target_ss, device)
+                self.test_ss_decoder(ss_decoder_output, target_ss, device)
 
     def embed_batch(self, input_vals, device):
         """
