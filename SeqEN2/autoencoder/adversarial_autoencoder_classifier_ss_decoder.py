@@ -77,14 +77,19 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
     def forward_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        return encoded
+        classifier_output = self.classifier(encoded)
+        ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
+        return encoded, classifier_output, ss_decoder_output
 
     def forward_eval_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
+        devectorized = self.devectorizer(decoded)
+        generator_output = self.discriminator(encoded)
         classifier_output = self.classifier(encoded)
         ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
-        return encoded, classifier_output, ss_decoder_output
+        return devectorized, generator_output, classifier_output, ss_decoder_output, encoded
 
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoderClassifierSSDecoder, self).save(model_dir, epoch)
@@ -154,6 +159,25 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         else:
             return input_ndx, target_vals, one_hot_input
 
+    def transform_input_clss(self, input_vals, device, input_noise=0.0):
+        # scans by sliding window of w
+        assert isinstance(input_vals, Tensor)
+        kernel_size = (input_vals.shape[1], self.w)
+        input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
+        input_ndx = input_vals[:, : self.w].long()
+        target_cl = input_vals[:, self.w : -self.w].mean(axis=1).reshape((-1, 1))
+        target_ss = input_vals[:, -self.w :].long()
+        one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
+        if input_noise > 0.0:
+            ndx = randperm(self.w)
+            size = list(one_hot_input.shape)
+            size[-1] = 1
+            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
+            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
+            return input_ndx, target_cl, target_ss, mutated_one_hot
+        else:
+            return input_ndx, target_cl, target_ss, one_hot_input
+
     def train_for_ss_decoder(self, one_hot_input, target_vals):
         self.ss_decoder_optimizer.zero_grad()
         ss_decoder_output = self.forward_ss_decoder(one_hot_input)
@@ -195,12 +219,41 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         )
         # train encoder_decoder
         self.train_for_reconstructor(one_hot_input, input_ndx)
-        # train for continuity
+        # # train for continuity
         self.train_for_continuity(one_hot_input)
         # train generator and discriminator
         self.train_for_generator_discriminator(one_hot_input, device)
         # train encoder_SS_decoder
         self.train_for_ss_decoder(one_hot_input, target_vals)
+        # training with clss data
+        if "clss" in input_vals.keys():
+            input_ndx, target_cl, target_ss, one_hot_input = self.transform_input_ss(
+                input_vals["clss"], device, input_noise=input_noise
+            )
+            # train encoder_decoder
+            self.train_for_reconstructor(one_hot_input, input_ndx)
+            # # train for continuity
+            self.train_for_continuity(one_hot_input)
+            # train generator and discriminator
+            self.train_for_generator_discriminator(one_hot_input, device)
+            # train encoder_SS_decoder
+            self.train_for_ss_decoder(one_hot_input, target_ss)
+            # train classifier
+            self.train_for_classifier(one_hot_input, target_cl)
+
+    def test_for_ss_decoder(self, ss_decoder_output, target_vals, device):
+        ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
+        self.log("test_ss_decoder_loss", ss_decoder_loss.item())
+        # ss_decoder acc
+        ss_decoder_ndx = argmax(ss_decoder_output, dim=1)
+        ss_decoder_accuracy = (
+            torch_sum(ss_decoder_ndx == target_vals.reshape((-1,))) / ss_decoder_ndx.shape[0]
+        )
+        consensus_ss_acc, _ = consensus_acc(
+            target_vals, ss_decoder_ndx.reshape((-1, self.w)), device
+        )
+        self.log("test_ss_decoder_accuracy", ss_decoder_accuracy.item())
+        self.log("test_consensus_ss_accuracy", consensus_ss_acc)
 
     def test_batch(self, input_vals, device, input_noise=0.0):
         """
@@ -215,89 +268,79 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         with no_grad():
             # testing with cl data
             input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals["cl"], device, input_noise=input_noise
+                input_vals["cl"], device
             )
+            # test
             (
                 reconstructor_output,
                 generator_output,
                 classifier_output,
-                ss_decoder_output,
-            ) = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_classifier_loss", classifier_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
+                _,
+                encoded_output,
+            ) = self.forward_eval_embed(one_hot_input)
+            # test for constructor
+            self.test_for_constructor(reconstructor_output, input_ndx, device)
+            # test continuity loss
+            self.test_for_continuity(encoded_output)
+            # test generator and discriminator
+            self.test_for_generator_discriminator(one_hot_input, generator_output, device)
+            # test for classifier
+            self.test_for_classifier(classifier_output, target_vals)
             # clean up
-            del reconstructor_output
-            del generator_output
-            del classifier_output
-            del reconstructor_loss
+            del input_ndx
             del target_vals
-            del classifier_loss
+            del one_hot_input
             # testing with ss data
             input_ndx, target_vals, one_hot_input = self.transform_input_ss(
-                input_vals["ss"], device, input_noise=input_noise
+                input_vals["ss"], device
             )
+            # test
             (
                 reconstructor_output,
                 generator_output,
-                classifier_output,
+                _,
                 ss_decoder_output,
-            ) = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # ss_decoder acc
-            ss_decoder_ndx = argmax(ss_decoder_output, dim=1)
-            ss_decoder_accuracy = (
-                torch_sum(ss_decoder_ndx == target_vals.reshape((-1,))) / ss_decoder_ndx.shape[0]
-            )
-            consensus_ss_acc, _ = consensus_acc(
-                target_vals, ss_decoder_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_ss_decoder_loss", ss_decoder_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
-            self.log("test_ss_decoder_accuracy", ss_decoder_accuracy.item())
-            self.log("test_consensus_ss_accuracy", consensus_ss_acc)
+                encoded_output,
+            ) = self.forward_eval_embed(one_hot_input)
+            # test for constructor
+            self.test_for_constructor(reconstructor_output, input_ndx, device)
+            # test continuity loss
+            self.test_for_continuity(encoded_output)
+            # test generator and discriminator
+            self.test_for_generator_discriminator(one_hot_input, generator_output, device)
+            # test for ss_decoder
+            self.test_for_ss_decoder(ss_decoder_output, target_vals, device)
             # clean up
-            del reconstructor_output
-            del generator_output
-            del classifier_output
-            del reconstructor_loss
+            del input_ndx
             del target_vals
-            del ss_decoder_loss
+            del one_hot_input
+            # training with clss data
+            if "clss" in input_vals.keys():
+                input_ndx, target_cl, target_ss, one_hot_input = self.transform_input_ss(
+                    input_vals["clss"], device
+                )
+                # test
+                (
+                    reconstructor_output,
+                    generator_output,
+                    classifier_output,
+                    ss_decoder_output,
+                    encoded_output,
+                ) = self.forward_eval_embed(one_hot_input)
+                # test for constructor
+                self.test_for_constructor(reconstructor_output, input_ndx, device)
+                # test continuity loss
+                self.test_for_continuity(encoded_output)
+                # test generator and discriminator
+                self.test_for_generator_discriminator(one_hot_input, generator_output, device)
+                # test for classifier
+                self.test_for_classifier(classifier_output, target_vals)
+                # test for ss_decoder
+                self.test_for_ss_decoder(ss_decoder_output, target_vals, device)
 
     def embed_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
-        :param input_noise:
         :param device:
         :param input_vals:
         :return:
@@ -306,14 +349,12 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         self.eval()
         with no_grad():
             # testing with cl data
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals, device, input_noise=0.0
-            )
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
             (
                 embedding,
                 classifier_output,
                 ss_decoder_output,
-            ) = self.forward_eval_embed(one_hot_input)
+            ) = self.forward_embed(one_hot_input)
             consensus_ss = get_consensus_seq(
                 argmax(ss_decoder_output, dim=1).reshape((-1, self.w)), device
             )

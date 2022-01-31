@@ -7,18 +7,16 @@ __version__ = "0.0.1"
 from typing import Dict
 
 from numpy.random import choice
-from torch import Tensor, argmax, cat
+from torch import Tensor, cat
 from torch import load as torch_load
 from torch import no_grad, optim, randperm
 from torch import save as torch_save
-from torch import sum as torch_sum
 from torch import tensor, transpose
 from torch.nn.functional import one_hot, unfold
 
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AAECTrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -59,21 +57,16 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         classifier_output = self.classifier(encoded)
         return classifier_output
 
-    def forward_test(self, one_hot_input):
+    def forward_eval_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
         devectorized = self.devectorizer(decoded)
-        discriminator_output = self.discriminator(encoded)
+        generator_output = self.discriminator(encoded)
         classifier_output = self.classifier(encoded)
-        return devectorized, discriminator_output, classifier_output
+        return devectorized, generator_output, classifier_output, encoded
 
     def forward_embed(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        return encoded
-
-    def forward_eval_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         classifier_output = self.classifier(encoded)
@@ -164,7 +157,11 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         del input_ndx
         del one_hot_input
 
-    def test_batch(self, input_vals, device, input_noise=0.0):
+    def test_for_classifier(self, classifier_output, target_vals):
+        classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
+        self.log("test_classifier_loss", classifier_loss.item())
+
+    def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_vals:
@@ -172,46 +169,29 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         """
         self.eval()
         with no_grad():
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals, device, input_noise=input_noise
-            )
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
+            # test
             (
                 reconstructor_output,
                 generator_output,
                 classifier_output,
-            ) = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_classifier_loss", classifier_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
+                encoded_output,
+            ) = self.forward_eval_embed(one_hot_input)
+            # test for constructor
+            self.test_for_constructor(reconstructor_output, input_ndx, device)
+            # test continuity loss
+            self.test_for_continuity(encoded_output)
+            # test generator and discriminator
+            self.test_for_generator_discriminator(one_hot_input, generator_output, device)
+            # test for classifier
+            self.test_for_classifier(classifier_output, target_vals)
             # clean up
             del input_ndx
-            del target_vals
             del one_hot_input
-            del reconstructor_output
-            del generator_output
-            del classifier_output
-            del reconstructor_loss
-            del classifier_loss
 
     def embed_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
-        :param input_noise:
         :param device:
         :param input_vals:
         :return:
@@ -220,8 +200,6 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         self.eval()
         with no_grad():
             # testing with cl data
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals, device, input_noise=0.0
-            )
-            embedding, classifier_output = self.forward_eval_embed(one_hot_input)
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
+            embedding, classifier_output = self.forward_embed(one_hot_input)
             return embedding, classifier_output

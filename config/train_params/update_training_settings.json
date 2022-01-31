@@ -21,7 +21,7 @@
                 "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
         },
         "continuity": {
-                "lr": 0.1,
-                "params": {"lr": 0.1, "factor": 0.99, "patience": 1000, "min_lr": 0.1}
+                "lr": 0.05,
+                "params": {"lr": 0.05, "factor": 0.99, "patience": 1000, "min_lr": 0.05}
         }
 }

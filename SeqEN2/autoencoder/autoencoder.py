@@ -6,15 +6,14 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from numpy import empty
 from numpy.random import choice
-from torch import Tensor, argmax, flip
+from torch import Tensor, argmax, cat
 from torch import load as torch_load
 from torch import no_grad, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
 from torch import tensor, transpose
-from torch.nn import CrossEntropyLoss, Module, MSELoss, NLLLoss
+from torch.nn import Module, MSELoss, NLLLoss
 from torch.nn.functional import one_hot, unfold
 
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
@@ -100,16 +99,17 @@ class Autoencoder(Module):
         devectorized = self.devectorizer(decoded)
         return devectorized
 
-    def forward_test(self, one_hot_input):
-        return self.forward_encoder_decoder(one_hot_input)
-
     def forward_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         return encoded
 
     def forward_eval_embed(self, one_hot_input):
-        return self.forward_embed(one_hot_input)
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
+        devectorized = self.devectorizer(decoded)
+        return devectorized, encoded
 
     def save(self, model_dir, epoch):
         torch_save(self.vectorizer, model_dir / f"vectorizer_{epoch}.m")
@@ -194,27 +194,21 @@ class Autoencoder(Module):
         self.logs = {}
 
     def train_for_continuity(self, one_hot_input):
-        losses = empty((one_hot_input.shape[0] - 1))
         self.continuity_optimizer.zero_grad()
-        for i in range(one_hot_input.shape[0] - 1):
-            encoded_output = self.forward_embed(one_hot_input[i : i + 2])
-            continuity_loss = self.criterion_MSELoss(
-                encoded_output,
-                flip(
-                    encoded_output,
-                    [
-                        0,
-                    ],
-                ),
-            )
-            continuity_loss.backward()
-            losses[i] = continuity_loss.item()
+        encoded_output = self.forward_embed(one_hot_input)
+        continuity_loss_r = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        )
+        continuity_loss_l = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        )
+        continuity_loss = continuity_loss_r + continuity_loss_l
+        continuity_loss.backward()
         self.continuity_optimizer.step()
-        self.log("continuity_loss_mean", losses.mean())
-        self.log("continuity_loss_std", losses.std())
-        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
         self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-        self.continuity_lr_scheduler.step(losses.mean())
+        self.continuity_lr_scheduler.step(continuity_loss.item())
+        self.log("continuity_loss", continuity_loss.item())
+        self.log("continuity_LR", self.training_settings.continuity.lr)
 
     def train_for_reconstructor(self, one_hot_input, input_ndx):
         self.reconstructor_optimizer.zero_grad()
@@ -245,6 +239,32 @@ class Autoencoder(Module):
         del input_ndx
         del one_hot_input
 
+    def test_for_constructor(self, reconstructor_output, input_ndx, device):
+        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
+        self.log("test_reconstructor_loss", reconstructor_loss.item())
+        # reconstructor acc
+        reconstructor_ndx = argmax(reconstructor_output, dim=1)
+        reconstructor_accuracy = (
+            torch_sum(reconstructor_ndx == input_ndx.reshape((-1,))) / reconstructor_ndx.shape[0]
+        )
+        consensus_seq_acc, _ = consensus_acc(
+            input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
+        )
+        # reconstruction_loss
+        self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
+        self.log("test_consensus_accuracy", consensus_seq_acc)
+
+    def test_for_continuity(self, encoded_output):
+        continuity_loss_r = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        )
+        continuity_loss_l = self.criterion_MSELoss(
+            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        )
+        continuity_loss = continuity_loss_r + continuity_loss_l
+        # continuity loss
+        self.log("test_continuity_loss", continuity_loss.item())
+
     def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
@@ -254,33 +274,19 @@ class Autoencoder(Module):
         self.eval()
         with no_grad():
             input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
-            reconstructor_output = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
+            # test
+            reconstructor_output, encoded_output = self.forward_eval_embed(one_hot_input)
+            # test for constructor
+            self.test_for_constructor(reconstructor_output, input_ndx, device)
+            # test continuity loss
+            self.test_for_continuity(encoded_output)
             # clean up
             del input_ndx
             del one_hot_input
-            del reconstructor_loss
-            del reconstructor_output
 
     def embed_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
-        :param input_noise:
         :param device:
         :param input_vals:
         :return:
@@ -289,6 +295,6 @@ class Autoencoder(Module):
         self.eval()
         with no_grad():
             # testing with cl data
-            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
-            embedding = self.forward_eval_embed(one_hot_input)
+            input_ndx, one_hot_input = self.transform_input(input_vals, device)
+            embedding = self.forward_embed(one_hot_input)
             return embedding

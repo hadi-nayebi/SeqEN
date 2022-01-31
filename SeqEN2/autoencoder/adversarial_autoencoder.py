@@ -6,17 +6,14 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from torch import argmax
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
-from torch import sum as torch_sum
 from torch import transpose, zeros
 
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AAETrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -63,13 +60,13 @@ class AdversarialAutoencoder(Autoencoder):
     def forward_discriminator(self, one_hot_input):
         return self.forward_generator(one_hot_input)
 
-    def forward_test(self, one_hot_input):
+    def forward_eval_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
         devectorized = self.devectorizer(decoded)
-        discriminator_output = self.discriminator(encoded)
-        return devectorized, discriminator_output
+        generator_output = self.discriminator(encoded)
+        return devectorized, generator_output, encoded
 
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoder, self).save(model_dir, epoch)
@@ -159,7 +156,23 @@ class AdversarialAutoencoder(Autoencoder):
         del input_ndx
         del one_hot_input
 
-    def test_batch(self, input_vals, device, input_noise=0.0):
+    def test_for_generator_discriminator(self, one_hot_input, generator_output, device):
+        # test generator
+        generator_loss = self.criterion_NLLLoss(
+            generator_output,
+            zeros((generator_output.shape[0],), device=device).long(),
+        )
+        self.log("test_generator_loss", generator_loss.item())
+        # test discriminator
+        ndx = randperm(self.w)
+        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
+        discriminator_loss = self.criterion_NLLLoss(
+            discriminator_output,
+            ones((discriminator_output.shape[0],), device=device).long(),
+        )
+        self.log("test_discriminator_loss", discriminator_loss.item())
+
+    def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
         :param input_vals:
@@ -167,29 +180,17 @@ class AdversarialAutoencoder(Autoencoder):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(
-                input_vals, device, input_noise=input_noise
+            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
+            # test
+            reconstructor_output, generator_output, encoded_output = self.forward_eval_embed(
+                one_hot_input
             )
-            (reconstructor_output, generator_output) = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
+            # test for constructor
+            self.test_for_constructor(reconstructor_output, input_ndx, device)
+            # test continuity loss
+            self.test_for_continuity(encoded_output)
+            # test generator and discriminator
+            self.test_for_generator_discriminator(one_hot_input, generator_output, device)
             # clean up
             del input_ndx
             del one_hot_input
-            del reconstructor_output
-            del generator_output
-            del reconstructor_loss
