@@ -51,22 +51,19 @@ class AdversarialAutoencoder(Autoencoder):
                 f"Training settings must be a dict or None or type AAETrainingSettings, {type(value)} is passed."
             )
 
-    def forward_generator(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        discriminator_output = self.discriminator(encoded)
-        return discriminator_output
-
-    def forward_discriminator(self, one_hot_input):
-        return self.forward_generator(one_hot_input)
-
-    def forward_eval_embed(self, one_hot_input):
+    def forward(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
         devectorized = self.devectorizer(decoded)
         generator_output = self.discriminator(encoded)
         return devectorized, generator_output, encoded
+
+    def forward_discriminator(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        discriminator_output = self.discriminator(encoded)
+        return discriminator_output
 
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoder, self).save(model_dir, epoch)
@@ -107,9 +104,8 @@ class AdversarialAutoencoder(Autoencoder):
             min_lr=self._training_settings.discriminator.min_lr,
         )
 
-    def train_for_generator_discriminator(self, one_hot_input, device):
+    def train_for_generator_discriminator(self, generator_output, one_hot_input, device):
         self.generator_optimizer.zero_grad()
-        generator_output = self.forward_generator(one_hot_input)
         generator_loss = self.criterion_NLLLoss(
             generator_output,
             zeros((generator_output.shape[0],), device=device).long(),
@@ -146,15 +142,14 @@ class AdversarialAutoencoder(Autoencoder):
         """
         self.train()
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
+        # forward
+        reconstructor_output, generator_output, encoded_output = self.forward(one_hot_input)
         # train encoder_decoder
-        self.train_for_reconstructor(one_hot_input, input_ndx)
+        self.train_for_reconstructor(reconstructor_output, input_ndx)
         # train for continuity
-        self.train_for_continuity(one_hot_input)
+        self.train_for_continuity(encoded_output)
         # train generator and discriminator
-        self.train_for_generator_discriminator(one_hot_input, device)
-        # clean up
-        del input_ndx
-        del one_hot_input
+        self.train_for_generator_discriminator(generator_output, one_hot_input, device)
 
     def test_for_generator_discriminator(self, one_hot_input, generator_output, device):
         # test generator
@@ -180,17 +175,12 @@ class AdversarialAutoencoder(Autoencoder):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
+            input_ndx, one_hot_input = self.transform_input(input_vals, device)
             # test
-            reconstructor_output, generator_output, encoded_output = self.forward_eval_embed(
-                one_hot_input
-            )
+            reconstructor_output, generator_output, encoded_output = self.forward(one_hot_input)
             # test for constructor
             self.test_for_constructor(reconstructor_output, input_ndx, device)
             # test continuity loss
             self.test_for_continuity(encoded_output)
             # test generator and discriminator
             self.test_for_generator_discriminator(one_hot_input, generator_output, device)
-            # clean up
-            del input_ndx
-            del one_hot_input

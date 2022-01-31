@@ -51,13 +51,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
                 f"Training settings must be a dict or None or type AAECTrainingSettings, {type(value)} is passed."
             )
 
-    def forward_classifier(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        classifier_output = self.classifier(encoded)
-        return classifier_output
-
-    def forward_eval_embed(self, one_hot_input):
+    def forward(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
@@ -122,9 +116,8 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         else:
             return input_ndx, target_vals, one_hot_input
 
-    def train_for_classifier(self, one_hot_input, target_vals):
+    def train_for_classifier(self, classifier_output, target_vals):
         self.classifier_optimizer.zero_grad()
-        classifier_output = self.forward_classifier(one_hot_input)
         classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
         classifier_loss.backward()
         self.classifier_optimizer.step()
@@ -145,17 +138,18 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         input_ndx, target_vals, one_hot_input = self.transform_input_cl(
             input_vals, device, input_noise=input_noise
         )
+        # forward
+        reconstructor_output, generator_output, classifier_output, encoded_output = self.forward(
+            one_hot_input
+        )
         # train encoder_decoder
-        self.train_for_reconstructor(one_hot_input, input_ndx)
+        self.train_for_reconstructor(reconstructor_output, input_ndx)
         # train for continuity
-        self.train_for_continuity(one_hot_input)
+        self.train_for_continuity(encoded_output)
         # train generator and discriminator
-        self.train_for_generator_discriminator(one_hot_input, device)
+        self.train_for_generator_discriminator(generator_output, one_hot_input, device)
         # train classifier
-        self.train_for_classifier(one_hot_input, target_vals)
-        # clean up
-        del input_ndx
-        del one_hot_input
+        self.train_for_classifier(classifier_output, target_vals)
 
     def test_for_classifier(self, classifier_output, target_vals):
         classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
@@ -176,7 +170,7 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
                 generator_output,
                 classifier_output,
                 encoded_output,
-            ) = self.forward_eval_embed(one_hot_input)
+            ) = self.forward(one_hot_input)
             # test for constructor
             self.test_for_constructor(reconstructor_output, input_ndx, device)
             # test continuity loss
@@ -185,9 +179,6 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
             self.test_for_generator_discriminator(one_hot_input, generator_output, device)
             # test for classifier
             self.test_for_classifier(classifier_output, target_vals)
-            # clean up
-            del input_ndx
-            del one_hot_input
 
     def embed_batch(self, input_vals, device):
         """

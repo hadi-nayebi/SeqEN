@@ -58,30 +58,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 f"Training settings must be a dict or None or type AAECSSTrainingSettings, {type(value)} is passed."
             )
 
-    def forward_ss_decoder(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
-        return ss_decoder_output
-
-    def forward_test(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
-        devectorized = self.devectorizer(decoded)
-        discriminator_output = self.discriminator(encoded)
-        classifier_output = self.classifier(encoded)
-        ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
-        return devectorized, discriminator_output, classifier_output, ss_decoder_output
-
-    def forward_embed(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        classifier_output = self.classifier(encoded)
-        ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
-        return encoded, classifier_output, ss_decoder_output
-
-    def forward_eval_embed(self, one_hot_input):
+    def forward(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
@@ -90,6 +67,13 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         classifier_output = self.classifier(encoded)
         ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
         return devectorized, generator_output, classifier_output, ss_decoder_output, encoded
+
+    def forward_embed(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        classifier_output = self.classifier(encoded)
+        ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
+        return encoded, classifier_output, ss_decoder_output
 
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoderClassifierSSDecoder, self).save(model_dir, epoch)
@@ -178,9 +162,8 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         else:
             return input_ndx, target_cl, target_ss, one_hot_input
 
-    def train_for_ss_decoder(self, one_hot_input, target_vals):
+    def train_for_ss_decoder(self, ss_decoder_output, target_vals):
         self.ss_decoder_optimizer.zero_grad()
-        ss_decoder_output = self.forward_ss_decoder(one_hot_input)
         ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
         ss_decoder_loss.backward()
         self.ss_decoder_optimizer.step()
@@ -205,41 +188,65 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         input_ndx, target_vals, one_hot_input = self.transform_input_cl(
             input_vals["cl"], device, input_noise=input_noise
         )
+        # forward
+        (
+            reconstructor_output,
+            generator_output,
+            classifier_output,
+            ss_decoder_output,
+            encoded_output,
+        ) = self.forward(one_hot_input)
         # train encoder_decoder
-        self.train_for_reconstructor(one_hot_input, input_ndx)
+        self.train_for_reconstructor(reconstructor_output, input_ndx)
         # train for continuity
-        self.train_for_continuity(one_hot_input)
+        self.train_for_continuity(encoded_output)
         # train generator and discriminator
-        self.train_for_generator_discriminator(one_hot_input, device)
+        self.train_for_generator_discriminator(generator_output, one_hot_input, device)
         # train classifier
-        self.train_for_classifier(one_hot_input, target_vals)
+        self.train_for_classifier(classifier_output, target_vals)
         # training with ss data
         input_ndx, target_vals, one_hot_input = self.transform_input_ss(
             input_vals["ss"], device, input_noise=input_noise
         )
+        # forward
+        (
+            reconstructor_output,
+            generator_output,
+            classifier_output,
+            ss_decoder_output,
+            encoded_output,
+        ) = self.forward(one_hot_input)
         # train encoder_decoder
-        self.train_for_reconstructor(one_hot_input, input_ndx)
-        # # train for continuity
-        self.train_for_continuity(one_hot_input)
+        self.train_for_reconstructor(reconstructor_output, input_ndx)
+        # train for continuity
+        self.train_for_continuity(encoded_output)
         # train generator and discriminator
-        self.train_for_generator_discriminator(one_hot_input, device)
-        # train encoder_SS_decoder
-        self.train_for_ss_decoder(one_hot_input, target_vals)
+        self.train_for_generator_discriminator(generator_output, one_hot_input, device)
+        # train encoder_ss_decoder
+        self.train_for_ss_decoder(ss_decoder_output, target_vals)
         # training with clss data
         if "clss" in input_vals.keys():
             input_ndx, target_cl, target_ss, one_hot_input = self.transform_input_ss(
                 input_vals["clss"], device, input_noise=input_noise
             )
+            # forward
+            (
+                reconstructor_output,
+                generator_output,
+                classifier_output,
+                ss_decoder_output,
+                encoded_output,
+            ) = self.forward(one_hot_input)
             # train encoder_decoder
-            self.train_for_reconstructor(one_hot_input, input_ndx)
-            # # train for continuity
-            self.train_for_continuity(one_hot_input)
+            self.train_for_reconstructor(reconstructor_output, input_ndx)
+            # train for continuity
+            self.train_for_continuity(encoded_output)
             # train generator and discriminator
-            self.train_for_generator_discriminator(one_hot_input, device)
-            # train encoder_SS_decoder
-            self.train_for_ss_decoder(one_hot_input, target_ss)
+            self.train_for_generator_discriminator(generator_output, one_hot_input, device)
             # train classifier
-            self.train_for_classifier(one_hot_input, target_cl)
+            self.train_for_classifier(classifier_output, target_vals)
+            # train encoder_ss_decoder
+            self.train_for_ss_decoder(ss_decoder_output, target_vals)
 
     def test_for_ss_decoder(self, ss_decoder_output, target_vals, device):
         ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
@@ -277,7 +284,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 classifier_output,
                 _,
                 encoded_output,
-            ) = self.forward_eval_embed(one_hot_input)
+            ) = self.forward(one_hot_input)
             # test for constructor
             self.test_for_constructor(reconstructor_output, input_ndx, device)
             # test continuity loss
@@ -301,7 +308,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 _,
                 ss_decoder_output,
                 encoded_output,
-            ) = self.forward_eval_embed(one_hot_input)
+            ) = self.forward(one_hot_input)
             # test for constructor
             self.test_for_constructor(reconstructor_output, input_ndx, device)
             # test continuity loss
@@ -326,7 +333,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                     classifier_output,
                     ss_decoder_output,
                     encoded_output,
-                ) = self.forward_eval_embed(one_hot_input)
+                ) = self.forward(one_hot_input)
                 # test for constructor
                 self.test_for_constructor(reconstructor_output, input_ndx, device)
                 # test continuity loss

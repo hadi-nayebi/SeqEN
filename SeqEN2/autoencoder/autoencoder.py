@@ -92,24 +92,17 @@ class Autoencoder(Module):
                         new_training_setting_dict[key] = item
                 self.initialize_for_training(training_settings=new_training_setting_dict)
 
-    def forward_encoder_decoder(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
-        devectorized = self.devectorizer(decoded)
-        return devectorized
-
-    def forward_embed(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        return encoded
-
-    def forward_eval_embed(self, one_hot_input):
+    def forward(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
         devectorized = self.devectorizer(decoded)
         return devectorized, encoded
+
+    def forward_embed(self, one_hot_input):
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        return encoded
 
     def save(self, model_dir, epoch):
         torch_save(self.vectorizer, model_dir / f"vectorizer_{epoch}.m")
@@ -193,9 +186,18 @@ class Autoencoder(Module):
     def reset_log(self):
         self.logs = {}
 
-    def train_for_continuity(self, one_hot_input):
+    def train_for_reconstructor(self, reconstructor_output, input_ndx):
+        self.reconstructor_optimizer.zero_grad()
+        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
+        reconstructor_loss.backward()
+        self.reconstructor_optimizer.step()
+        self.log("reconstructor_loss", reconstructor_loss.item())
+        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
+        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+
+    def train_for_continuity(self, encoded_output):
         self.continuity_optimizer.zero_grad()
-        encoded_output = self.forward_embed(one_hot_input)
         continuity_loss_r = self.criterion_MSELoss(
             encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
         )
@@ -210,17 +212,6 @@ class Autoencoder(Module):
         self.log("continuity_loss", continuity_loss.item())
         self.log("continuity_LR", self.training_settings.continuity.lr)
 
-    def train_for_reconstructor(self, one_hot_input, input_ndx):
-        self.reconstructor_optimizer.zero_grad()
-        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
-        self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -231,13 +222,12 @@ class Autoencoder(Module):
         """
         self.train()
         input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
+        # forward
+        reconstructor_output, encoded_output = self.forward(one_hot_input)
         # train encoder_decoder
-        self.train_for_reconstructor(one_hot_input, input_ndx)
+        self.train_for_reconstructor(reconstructor_output, input_ndx)
         # train for continuity
-        self.train_for_continuity(one_hot_input)
-        # clean up
-        del input_ndx
-        del one_hot_input
+        self.train_for_continuity(encoded_output)
 
     def test_for_constructor(self, reconstructor_output, input_ndx, device):
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
@@ -273,16 +263,13 @@ class Autoencoder(Module):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=0.0)
+            input_ndx, one_hot_input = self.transform_input(input_vals, device)
             # test
             reconstructor_output, encoded_output = self.forward_eval_embed(one_hot_input)
             # test for constructor
             self.test_for_constructor(reconstructor_output, input_ndx, device)
             # test continuity loss
             self.test_for_continuity(encoded_output)
-            # clean up
-            del input_ndx
-            del one_hot_input
 
     def embed_batch(self, input_vals, device):
         """
