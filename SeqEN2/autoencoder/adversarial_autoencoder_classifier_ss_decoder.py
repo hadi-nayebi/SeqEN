@@ -359,13 +359,16 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             self.log("test_classifier_loss", classifier_loss.item())
             self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
             self.log("test_consensus_accuracy", consensus_seq_acc)
-            # clean up
-            del reconstructor_output
-            del generator_output
-            del classifier_output
-            del reconstructor_loss
-            del target_vals
-            del classifier_loss
+            # test for continuity
+            encoded_output = self.forward_embed(one_hot_input)
+            continuity_loss_r = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+            )
+            continuity_loss_l = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+            )
+            continuity_loss = continuity_loss_r + continuity_loss_l
+            self.log("test_continuity_loss", continuity_loss.item())
             # testing with ss data
             input_ndx, target_vals, one_hot_input = self.transform_input_ss(
                 input_vals["ss"], device
@@ -404,13 +407,16 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
             self.log("test_consensus_accuracy", consensus_seq_acc)
             self.log("test_ss_decoder_accuracy", ss_decoder_accuracy.item())
             self.log("test_consensus_ss_accuracy", consensus_ss_acc)
-            # clean up
-            del reconstructor_output
-            del generator_output
-            del classifier_output
-            del reconstructor_loss
-            del target_vals
-            del ss_decoder_loss
+            # test for continuity
+            encoded_output = self.forward_embed(one_hot_input)
+            continuity_loss_r = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+            )
+            continuity_loss_l = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+            )
+            continuity_loss = continuity_loss_r + continuity_loss_l
+            self.log("test_continuity_loss", continuity_loss.item())
 
     def embed_batch(self, input_vals, device):
         """
