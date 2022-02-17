@@ -411,7 +411,7 @@ class Model:
                 iter_for_log += 1
                 if iter_for_test == test_interval:
                     iter_for_test = 0
-                    self.test_aaecss_clss()
+                    self.test_aaecss_clss_only()
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
             self.store_model(model, train_dir, epoch)
