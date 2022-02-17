@@ -545,7 +545,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                     input_ndx,
                     target_vals_ss,
                     target_vals_cl,
-                    mutated_one_hot,
+                    one_hot_input,
                 ) = self.transform_input_clss(input_vals["clss"], device)
                 (
                     reconstructor_output,
