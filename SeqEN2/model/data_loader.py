@@ -160,4 +160,4 @@ class DataLoader(object):
         all_data = self._test_data.copy()
         all_data.update(self._train_data)
         for key in all_data.keys():
-            yield self._test_data[key]
+            yield all_data[key]
