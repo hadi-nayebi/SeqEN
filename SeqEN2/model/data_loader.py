@@ -157,7 +157,7 @@ class DataLoader(object):
             return self._train_data[key]
 
     def get_all(self):
-        for key in self._test_data.keys():
-            return self._test_data[key]
-        for key in self._train_data.keys():
-            return self._train_data[key]
+        all_data = self._test_data.copy()
+        all_data.update(self._train_data)
+        for key in all_data.keys():
+            yield self._test_data[key]
