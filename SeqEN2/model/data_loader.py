@@ -4,7 +4,7 @@ import gzip
 import json
 from os.path import dirname
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict
 
 from numpy import arange, array, concatenate, ndarray
 from numpy.random import choice, permutation
@@ -72,7 +72,7 @@ def join(items) -> tensor:
     return output
 
 
-def to_tensor(data, key, device) -> tensor:
+def to_tensor(data, key, device) -> (tensor, Dict):
     output = None
     metadata = {"name": key}
     for i, (key, value) in enumerate(data.items()):

@@ -359,7 +359,7 @@ class Model:
         self.finalize_training(train_dir, is_testing=is_testing)
 
     def test_aaecss_clss(self, num_test_items=1):
-        for batch_cl, batch_ss, batch_clss in zip(
+        for (batch_cl, metadata_cl), (batch_ss, metadata_ss), (batch_clss, metadata_clss) in zip(
             self.data_loader_cl.get_test_batch(batch_size=num_test_items),
             self.data_loader_ss.get_test_batch(batch_size=num_test_items),
             self.data_loader_clss.get_test_batch(batch_size=num_test_items),
