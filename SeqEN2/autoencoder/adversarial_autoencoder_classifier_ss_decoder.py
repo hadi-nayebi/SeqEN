@@ -571,6 +571,9 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                 reconstructor_loss = self.criterion_NLLLoss(
                     reconstructor_output, input_ndx.reshape((-1,))
                 )
+                ss_decoder_loss = self.criterion_NLLLoss(
+                    ss_decoder_output, target_vals_ss.reshape((-1,))
+                )
                 classifier_loss = self.criterion_MSELoss(classifier_output, target_vals_cl)
                 # reconstructor acc
                 reconstructor_ndx = argmax(reconstructor_output, dim=1)
