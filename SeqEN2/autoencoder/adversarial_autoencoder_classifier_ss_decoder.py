@@ -113,7 +113,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
 
     def transform_input_cl(self, input_vals, device, input_noise=0.0):
         # scans by sliding window of w
-        assert isinstance(input_vals, Tensor)
+        assert isinstance(input_vals, Tensor), f"expected Tensor type, received {type(input_vals)}"
         kernel_size = (input_vals.shape[1], self.w)
         input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=kernel_size)[0].T
         input_ndx = input_vals[:, : self.w].long()
@@ -132,7 +132,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
 
     def transform_input_ss(self, input_vals, device, input_noise=0.0):
         # scans by sliding window of w
-        assert isinstance(input_vals, Tensor)
+        assert isinstance(input_vals, Tensor), f"expected Tensor type, received {type(input_vals)}"
         kernel_size = (input_vals.shape[1], self.w)
         input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
         input_ndx = input_vals[:, : self.w].long()
@@ -150,7 +150,7 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
 
     def transform_input_clss(self, input_vals, device, input_noise=0.0):
         # scans by sliding window of w
-        assert isinstance(input_vals, Tensor)
+        assert isinstance(input_vals, Tensor), f"expected Tensor type, received {type(input_vals)}"
         kernel_size = (input_vals.shape[1], self.w)
         input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
         input_ndx = input_vals[:, : self.w].long()
