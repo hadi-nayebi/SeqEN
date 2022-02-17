@@ -150,5 +150,14 @@ class DataLoader(object):
                 key = self.test_data_keys[i]
                 yield self._test_data[key]
 
-    def get_test_by_key(self, key) -> (tensor, dict):
-        return self._test_data[key]
+    def get_by_key(self, key, dataset="test") -> (tensor, dict):
+        if dataset == "test":
+            return self._test_data[key]
+        elif dataset == "train":
+            return self._train_data[key]
+
+    def get_all(self):
+        for _, item in self._test_data.items():
+            return item
+        for _, item in self._train_data.items():
+            return item
