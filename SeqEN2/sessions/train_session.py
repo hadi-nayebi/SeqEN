@@ -115,7 +115,8 @@ def main(args):
     # load datafiles
     mvid = None
     training_settings = args["Training Settings"]
-    train_session.load_data("cl", args["Dataset_cl"])
+    if args["Dataset_cl"] != "":
+        train_session.load_data("cl", args["Dataset_cl"])
     if args["Dataset_ss"] != "":
         train_session.load_data("ss", args["Dataset_ss"])
     if args["Dataset_clss"] != "":
