@@ -4,6 +4,7 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
+import pickle
 from datetime import datetime
 from os.path import dirname
 from pathlib import Path
@@ -61,8 +62,51 @@ class TestSession:
         self.model.test(num_test_items=num_test_items)
 
     def get_embedding(self, num_test_items=-1, test_items=None):
-        for item in self.model.get_embedding(num_test_items=num_test_items, test_items=test_items):
-            self.embedding_results[item.attrs["name"]] = item
+        self.embedding_results = {}
+        if self.model.data_loader_cl is not None:
+            for item in self.model.get_embedding(
+                num_test_items=num_test_items, test_items=test_items, dataset="cl"
+            ):
+                self.embedding_results[item.attrs["name"]] = item
+        if self.model.data_loader_clss is not None:
+            for item in self.model.get_embedding(
+                num_test_items=num_test_items, test_items=test_items, dataset="clss"
+            ):
+                self.embedding_results[item.attrs["name"]] = item
+
+        filename = (
+            self.models_dir
+            / self.model.name
+            / "versions"
+            / self.version
+            / f"embeddings_only_{self.model_id}"
+        )
+        if not filename.exists():
+            filename.mkdir()
+        datafile = filename / f"embeddings.pkl.bz2"
+        with open(datafile, "wb") as f:
+            pickle.dump(self.embedding_results, f)
+
+    def get_embedding_all(self):
+        self.embedding_results = {}
+        if self.model.data_loader_cl is not None:
+            for item in self.model.get_embedding_all(dataset="cl"):
+                self.embedding_results[item.attrs["name"]] = item
+        if self.model.data_loader_clss is not None:
+            for item in self.model.get_embedding_all(dataset="clss"):
+                self.embedding_results[item.attrs["name"]] = item
+        filename = (
+            self.models_dir
+            / self.model.name
+            / "versions"
+            / self.version
+            / f"all_embeddings_only_{self.model_id}"
+        )
+        if not filename.exists():
+            filename.mkdir()
+        datafile = filename / f"embeddings.pkl.bz2"
+        with open(datafile, "wb") as f:
+            pickle.dump(self.embedding_results, f)
 
     def tsne_embeddings(self, dim=2):
         # combine embeddings
@@ -263,7 +307,10 @@ def main(args):
     # tests
     # embeddings
     if args["Get Embedding"]:
-        test_session.get_embedding(num_test_items=args["Test Batch"])
+        if args["Get All Embedding"]:
+            test_session.get_embedding_all()
+        else:
+            test_session.get_embedding(num_test_items=args["Test Batch"])
         if args["tSNE dim"]:
             if args["tSNE dim"] == 2:
                 test_session.plot_embedding_2d(method="tsne")
