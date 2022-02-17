@@ -177,170 +177,176 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         :return:
         """
         assert isinstance(input_vals, Dict), "AAECSS requires a dict as input_vals"
-        key_check = "ss" in input_vals.keys() and "cl" in input_vals.keys()
-        assert key_check, "input_vals must contain cl and ss keys"
+        # key_check = "ss" in input_vals.keys() and "cl" in input_vals.keys()
+        # assert key_check, "input_vals must contain cl and ss keys"
         self.train()
         # training with cl data
-        input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-            input_vals["cl"], device, input_noise=input_noise
-        )
-        # train encoder_decoder
-        self.reconstructor_optimizer.zero_grad()
-        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
-        self.reconstructor_optimizer.step()
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self.training_settings.reconstructor.lr)
-        # train for continuity
-        if not self.ignore_continuity:
-            self.continuity_optimizer.zero_grad()
-            encoded_output = self.forward_embed(one_hot_input)
-            continuity_loss_r = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        if "cl" in input_vals.keys():
+            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
+                input_vals["cl"], device, input_noise=input_noise
             )
-            continuity_loss_l = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+            # train encoder_decoder
+            self.reconstructor_optimizer.zero_grad()
+            reconstructor_output = self.forward_encoder_decoder(one_hot_input)
+            reconstructor_loss = self.criterion_NLLLoss(
+                reconstructor_output, input_ndx.reshape((-1,))
             )
-            continuity_loss = continuity_loss_r + continuity_loss_l
-            continuity_loss.backward()
-            self.continuity_optimizer.step()
-            self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-            self.continuity_lr_scheduler.step(continuity_loss.item())
-            self.log("continuity_loss", continuity_loss.item())
-            self.log("continuity_LR", self.training_settings.continuity.lr)
-            del encoded_output
-            del continuity_loss
-        # train generator
-        self.generator_optimizer.zero_grad()
-        generator_output = self.forward_generator(one_hot_input)
-        generator_loss = self.criterion_NLLLoss(
-            generator_output,
-            zeros((generator_output.shape[0],), device=device).long(),
-        )
-        generator_loss.backward()
-        self.generator_optimizer.step()
-        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
-        self.log("generator_loss", generator_loss.item())
-        self.log("generator_LR", self.training_settings.generator.lr)
-        # train discriminator
-        self.discriminator_optimizer.zero_grad()
-        ndx = randperm(self.w)
-        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
-        discriminator_loss = self.criterion_NLLLoss(
-            discriminator_output,
-            ones((discriminator_output.shape[0],), device=device).long(),
-        )
-        discriminator_loss.backward()
-        self.discriminator_optimizer.step()
-        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
-        gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
-        self.generator_lr_scheduler.step(gen_disc_loss)
-        self.discriminator_lr_scheduler.step(gen_disc_loss)
-        self.log("discriminator_loss", discriminator_loss.item())
-        self.log("discriminator_LR", self.training_settings.discriminator.lr)
-        # train classifier
-        self.classifier_optimizer.zero_grad()
-        classifier_output = self.forward_classifier(one_hot_input)
-        classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-        classifier_loss.backward()
-        self.classifier_optimizer.step()
-        self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
-        self.classifier_lr_scheduler.step(classifier_loss.item())
-        self.log("classifier_loss", classifier_loss.item())
-        self.log("classifier_LR", self._training_settings.classifier.lr)
-        # clean up
-        del reconstructor_loss
-        del reconstructor_output
-        del generator_output
-        del generator_loss
-        del discriminator_output
-        del discriminator_loss
-        del classifier_output
-        del classifier_loss
+            reconstructor_loss.backward()
+            self.reconstructor_optimizer.step()
+            self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
+            self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+            self.log("reconstructor_loss", reconstructor_loss.item())
+            self.log("reconstructor_LR", self.training_settings.reconstructor.lr)
+            # train for continuity
+            if not self.ignore_continuity:
+                self.continuity_optimizer.zero_grad()
+                encoded_output = self.forward_embed(one_hot_input)
+                continuity_loss_r = self.criterion_MSELoss(
+                    encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+                )
+                continuity_loss_l = self.criterion_MSELoss(
+                    encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                )
+                continuity_loss = continuity_loss_r + continuity_loss_l
+                continuity_loss.backward()
+                self.continuity_optimizer.step()
+                self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+                self.continuity_lr_scheduler.step(continuity_loss.item())
+                self.log("continuity_loss", continuity_loss.item())
+                self.log("continuity_LR", self.training_settings.continuity.lr)
+                del encoded_output
+                del continuity_loss
+            # train generator
+            self.generator_optimizer.zero_grad()
+            generator_output = self.forward_generator(one_hot_input)
+            generator_loss = self.criterion_NLLLoss(
+                generator_output,
+                zeros((generator_output.shape[0],), device=device).long(),
+            )
+            generator_loss.backward()
+            self.generator_optimizer.step()
+            self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
+            self.log("generator_loss", generator_loss.item())
+            self.log("generator_LR", self.training_settings.generator.lr)
+            # train discriminator
+            self.discriminator_optimizer.zero_grad()
+            ndx = randperm(self.w)
+            discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
+            discriminator_loss = self.criterion_NLLLoss(
+                discriminator_output,
+                ones((discriminator_output.shape[0],), device=device).long(),
+            )
+            discriminator_loss.backward()
+            self.discriminator_optimizer.step()
+            self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
+            gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
+            self.generator_lr_scheduler.step(gen_disc_loss)
+            self.discriminator_lr_scheduler.step(gen_disc_loss)
+            self.log("discriminator_loss", discriminator_loss.item())
+            self.log("discriminator_LR", self.training_settings.discriminator.lr)
+            # train classifier
+            self.classifier_optimizer.zero_grad()
+            classifier_output = self.forward_classifier(one_hot_input)
+            classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
+            classifier_loss.backward()
+            self.classifier_optimizer.step()
+            self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
+            self.classifier_lr_scheduler.step(classifier_loss.item())
+            self.log("classifier_loss", classifier_loss.item())
+            self.log("classifier_LR", self._training_settings.classifier.lr)
+            # clean up
+            del reconstructor_loss
+            del reconstructor_output
+            del generator_output
+            del generator_loss
+            del discriminator_output
+            del discriminator_loss
+            del classifier_output
+            del classifier_loss
 
         # training with ss data
-        input_ndx, target_vals, one_hot_input = self.transform_input_ss(
-            input_vals["ss"], device, input_noise=input_noise
-        )
-        # train encoder_decoder
-        self.reconstructor_optimizer.zero_grad()
-        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
-        self.reconstructor_optimizer.step()
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self.training_settings.reconstructor.lr)
-        # train for continuity
-        if not self.ignore_continuity:
-            self.continuity_optimizer.zero_grad()
-            encoded_output = self.forward_embed(one_hot_input)
-            continuity_loss_r = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        if "ss" in input_vals.keys():
+            input_ndx, target_vals, one_hot_input = self.transform_input_ss(
+                input_vals["ss"], device, input_noise=input_noise
             )
-            continuity_loss_l = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+            # train encoder_decoder
+            self.reconstructor_optimizer.zero_grad()
+            reconstructor_output = self.forward_encoder_decoder(one_hot_input)
+            reconstructor_loss = self.criterion_NLLLoss(
+                reconstructor_output, input_ndx.reshape((-1,))
             )
-            continuity_loss = continuity_loss_r + continuity_loss_l
-            continuity_loss.backward()
-            self.continuity_optimizer.step()
-            self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-            self.continuity_lr_scheduler.step(continuity_loss.item())
-            self.log("continuity_loss", continuity_loss.item())
-            self.log("continuity_LR", self.training_settings.continuity.lr)
-            del encoded_output
-            del continuity_loss
-        # train encoder_SS_decoder
-        self.ss_decoder_optimizer.zero_grad()
-        ss_decoder_output = self.forward_ss_decoder(one_hot_input)
-        ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
-        ss_decoder_loss.backward()
-        self.ss_decoder_optimizer.step()
-        self._training_settings.ss_decoder.lr = self.ss_decoder_lr_scheduler.get_last_lr()
-        self.ss_decoder_lr_scheduler.step(ss_decoder_loss.item())
-        self.log("ss_decoder_loss", ss_decoder_loss.item())
-        self.log("ss_decoder_LR", self.training_settings.ss_decoder.lr)
-        # train generator
-        self.generator_optimizer.zero_grad()
-        generator_output = self.forward_generator(one_hot_input)
-        generator_loss = self.criterion_NLLLoss(
-            generator_output,
-            zeros((generator_output.shape[0],), device=device).long(),
-        )
-        generator_loss.backward()
-        self.generator_optimizer.step()
-        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
-        self.log("generator_loss", generator_loss.item())
-        self.log("generator_LR", self.training_settings.generator.lr)
-        # train discriminator
-        self.discriminator_optimizer.zero_grad()
-        ndx = randperm(self.w)
-        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
-        discriminator_loss = self.criterion_NLLLoss(
-            discriminator_output,
-            ones((discriminator_output.shape[0],), device=device).long(),
-        )
-        discriminator_loss.backward()
-        self.discriminator_optimizer.step()
-        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
-        gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
-        self.generator_lr_scheduler.step(gen_disc_loss)
-        self.discriminator_lr_scheduler.step(gen_disc_loss)
-        self.log("discriminator_loss", discriminator_loss.item())
-        self.log("discriminator_LR", self.training_settings.discriminator.lr)
-        # clean up
-        del reconstructor_loss
-        del reconstructor_output
-        del generator_output
-        del generator_loss
-        del discriminator_output
-        del discriminator_loss
-        del ss_decoder_output
-        del ss_decoder_loss
+            reconstructor_loss.backward()
+            self.reconstructor_optimizer.step()
+            self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
+            self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+            self.log("reconstructor_loss", reconstructor_loss.item())
+            self.log("reconstructor_LR", self.training_settings.reconstructor.lr)
+            # train for continuity
+            if not self.ignore_continuity:
+                self.continuity_optimizer.zero_grad()
+                encoded_output = self.forward_embed(one_hot_input)
+                continuity_loss_r = self.criterion_MSELoss(
+                    encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+                )
+                continuity_loss_l = self.criterion_MSELoss(
+                    encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                )
+                continuity_loss = continuity_loss_r + continuity_loss_l
+                continuity_loss.backward()
+                self.continuity_optimizer.step()
+                self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+                self.continuity_lr_scheduler.step(continuity_loss.item())
+                self.log("continuity_loss", continuity_loss.item())
+                self.log("continuity_LR", self.training_settings.continuity.lr)
+                del encoded_output
+                del continuity_loss
+            # train encoder_SS_decoder
+            self.ss_decoder_optimizer.zero_grad()
+            ss_decoder_output = self.forward_ss_decoder(one_hot_input)
+            ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
+            ss_decoder_loss.backward()
+            self.ss_decoder_optimizer.step()
+            self._training_settings.ss_decoder.lr = self.ss_decoder_lr_scheduler.get_last_lr()
+            self.ss_decoder_lr_scheduler.step(ss_decoder_loss.item())
+            self.log("ss_decoder_loss", ss_decoder_loss.item())
+            self.log("ss_decoder_LR", self.training_settings.ss_decoder.lr)
+            # train generator
+            self.generator_optimizer.zero_grad()
+            generator_output = self.forward_generator(one_hot_input)
+            generator_loss = self.criterion_NLLLoss(
+                generator_output,
+                zeros((generator_output.shape[0],), device=device).long(),
+            )
+            generator_loss.backward()
+            self.generator_optimizer.step()
+            self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
+            self.log("generator_loss", generator_loss.item())
+            self.log("generator_LR", self.training_settings.generator.lr)
+            # train discriminator
+            self.discriminator_optimizer.zero_grad()
+            ndx = randperm(self.w)
+            discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
+            discriminator_loss = self.criterion_NLLLoss(
+                discriminator_output,
+                ones((discriminator_output.shape[0],), device=device).long(),
+            )
+            discriminator_loss.backward()
+            self.discriminator_optimizer.step()
+            self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
+            gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
+            self.generator_lr_scheduler.step(gen_disc_loss)
+            self.discriminator_lr_scheduler.step(gen_disc_loss)
+            self.log("discriminator_loss", discriminator_loss.item())
+            self.log("discriminator_LR", self.training_settings.discriminator.lr)
+            # clean up
+            del reconstructor_loss
+            del reconstructor_output
+            del generator_output
+            del generator_loss
+            del discriminator_output
+            del discriminator_loss
+            del ss_decoder_output
+            del ss_decoder_loss
 
         # training with clss data
         if "clss" in input_vals.keys():
@@ -447,98 +453,107 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         :return:
         """
         assert isinstance(input_vals, Dict), "AAECSS requires a dict as input_vals"
-        key_check = "ss" in input_vals.keys() and "cl" in input_vals.keys()
-        assert key_check, "input_vals must contain cl and ss keys"
+        # key_check = "ss" in input_vals.keys() and "cl" in input_vals.keys()
+        # assert key_check, "input_vals must contain cl and ss keys"
         self.eval()
         with no_grad():
             # testing with cl data
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-                input_vals["cl"], device
-            )
-            (
-                reconstructor_output,
-                generator_output,
-                classifier_output,
-                ss_decoder_output,
-            ) = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_classifier_loss", classifier_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
-            # test for continuity
-            if not self.ignore_continuity:
-                encoded_output = self.forward_embed(one_hot_input)
-                continuity_loss_r = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+            if "cl" in input_vals.keys():
+                input_ndx, target_vals, one_hot_input = self.transform_input_cl(
+                    input_vals["cl"], device
                 )
-                continuity_loss_l = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                (
+                    reconstructor_output,
+                    generator_output,
+                    classifier_output,
+                    ss_decoder_output,
+                ) = self.forward_test(one_hot_input)
+                reconstructor_loss = self.criterion_NLLLoss(
+                    reconstructor_output, input_ndx.reshape((-1,))
                 )
-                continuity_loss = continuity_loss_r + continuity_loss_l
-                self.log("test_continuity_loss", continuity_loss.item())
+                classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
+                # reconstructor acc
+                reconstructor_ndx = argmax(reconstructor_output, dim=1)
+                reconstructor_accuracy = (
+                    torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
+                    / reconstructor_ndx.shape[0]
+                )
+                consensus_seq_acc, _ = consensus_acc(
+                    input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
+                )
+                # reconstruction_loss, discriminator_loss, classifier_loss
+                self.log("test_reconstructor_loss", reconstructor_loss.item())
+                self.log("test_classifier_loss", classifier_loss.item())
+                self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
+                self.log("test_consensus_accuracy", consensus_seq_acc)
+                # test for continuity
+                if not self.ignore_continuity:
+                    encoded_output = self.forward_embed(one_hot_input)
+                    continuity_loss_r = self.criterion_MSELoss(
+                        encoded_output,
+                        cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0),
+                    )
+                    continuity_loss_l = self.criterion_MSELoss(
+                        encoded_output,
+                        cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0),
+                    )
+                    continuity_loss = continuity_loss_r + continuity_loss_l
+                    self.log("test_continuity_loss", continuity_loss.item())
             # testing with ss data
-            input_ndx, target_vals, one_hot_input = self.transform_input_ss(
-                input_vals["ss"], device
-            )
-            (
-                reconstructor_output,
-                generator_output,
-                classifier_output,
-                ss_decoder_output,
-            ) = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals.reshape((-1,)))
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # ss_decoder acc
-            ss_decoder_ndx = argmax(ss_decoder_output, dim=1)
-            ss_decoder_accuracy = (
-                torch_sum(ss_decoder_ndx == target_vals.reshape((-1,))) / ss_decoder_ndx.shape[0]
-            )
-            consensus_ss_acc, _ = consensus_acc(
-                target_vals, ss_decoder_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_ss_decoder_loss", ss_decoder_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
-            self.log("test_ss_decoder_accuracy", ss_decoder_accuracy.item())
-            self.log("test_consensus_ss_accuracy", consensus_ss_acc)
-            # test for continuity
-            if not self.ignore_continuity:
-                encoded_output = self.forward_embed(one_hot_input)
-                continuity_loss_r = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+            if "ss" in input_vals.keys():
+                input_ndx, target_vals, one_hot_input = self.transform_input_ss(
+                    input_vals["ss"], device
                 )
-                continuity_loss_l = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                (
+                    reconstructor_output,
+                    generator_output,
+                    classifier_output,
+                    ss_decoder_output,
+                ) = self.forward_test(one_hot_input)
+                reconstructor_loss = self.criterion_NLLLoss(
+                    reconstructor_output, input_ndx.reshape((-1,))
                 )
-                continuity_loss = continuity_loss_r + continuity_loss_l
-                self.log("test_continuity_loss", continuity_loss.item())
+                ss_decoder_loss = self.criterion_NLLLoss(
+                    ss_decoder_output, target_vals.reshape((-1,))
+                )
+                # reconstructor acc
+                reconstructor_ndx = argmax(reconstructor_output, dim=1)
+                reconstructor_accuracy = (
+                    torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
+                    / reconstructor_ndx.shape[0]
+                )
+                consensus_seq_acc, _ = consensus_acc(
+                    input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
+                )
+                # ss_decoder acc
+                ss_decoder_ndx = argmax(ss_decoder_output, dim=1)
+                ss_decoder_accuracy = (
+                    torch_sum(ss_decoder_ndx == target_vals.reshape((-1,)))
+                    / ss_decoder_ndx.shape[0]
+                )
+                consensus_ss_acc, _ = consensus_acc(
+                    target_vals, ss_decoder_ndx.reshape((-1, self.w)), device
+                )
+                # reconstruction_loss, discriminator_loss, classifier_loss
+                self.log("test_reconstructor_loss", reconstructor_loss.item())
+                self.log("test_ss_decoder_loss", ss_decoder_loss.item())
+                self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
+                self.log("test_consensus_accuracy", consensus_seq_acc)
+                self.log("test_ss_decoder_accuracy", ss_decoder_accuracy.item())
+                self.log("test_consensus_ss_accuracy", consensus_ss_acc)
+                # test for continuity
+                if not self.ignore_continuity:
+                    encoded_output = self.forward_embed(one_hot_input)
+                    continuity_loss_r = self.criterion_MSELoss(
+                        encoded_output,
+                        cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0),
+                    )
+                    continuity_loss_l = self.criterion_MSELoss(
+                        encoded_output,
+                        cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0),
+                    )
+                    continuity_loss = continuity_loss_r + continuity_loss_l
+                    self.log("test_continuity_loss", continuity_loss.item())
             # training with clss data
             if "clss" in input_vals.keys():
                 (

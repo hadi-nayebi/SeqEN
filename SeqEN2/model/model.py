@@ -106,8 +106,8 @@ class Model:
         ignore_continuity=False,
     ):
         self.autoencoder.ignore_continuity = ignore_continuity
-        assert self.data_loader_cl is not None, "at least dataset0 must be provided"
         if self.autoencoder.arch.type in ["AE", "AAE", "AAEC"]:
+            assert self.data_loader_cl is not None, "at least dataset0 must be provided"
             self.train_aaec(
                 epochs=epochs,
                 batch_size=batch_size,
@@ -119,9 +119,22 @@ class Model:
                 mvid=mvid,
             )
         elif self.autoencoder.arch.type == "AAECSS":
-            assert self.data_loader_ss is not None, "both -dcl and -dss must be passed"
             if self.data_loader_clss is None:
+                assert self.data_loader_cl is not None, "at least dataset0 must be provided"
+                assert self.data_loader_ss is not None, "both -dcl and -dss must be passed"
                 self.train_aaecss_cl_ss(
+                    epochs=epochs,
+                    batch_size=batch_size,
+                    test_interval=test_interval,
+                    training_settings=training_settings,
+                    input_noise=input_noise,
+                    log_every=log_every,
+                    is_testing=is_testing,
+                    mvid=mvid,
+                )
+            elif self.data_loader_cl is not None and self.data_loader_ss is not None:
+                assert self.data_loader_clss is not None, "all -dcl, -dss and -dclss must be passed"
+                self.train_aaecss_clss(
                     epochs=epochs,
                     batch_size=batch_size,
                     test_interval=test_interval,
@@ -133,7 +146,7 @@ class Model:
                 )
             else:
                 assert self.data_loader_clss is not None, "all -dcl, -dss and -dclss must be passed"
-                self.train_aaecss_clss(
+                self.train_aaecss_clss_only(
                     epochs=epochs,
                     batch_size=batch_size,
                     test_interval=test_interval,
@@ -162,6 +175,10 @@ class Model:
             self.data_loader_clss.get_train_batch(batch_size=batch_size, max_size=max_size),
         ):
             yield {"cl": batch_cl, "ss": batch_ss, "clss": batch_clss}
+
+    def get_train_batch_clss_only(self, batch_size):
+        for batch_clss in self.data_loader_clss.get_train_batch(batch_size=batch_size):
+            yield {"clss": batch_clss}
 
     def log_it(self, counter, epoch):
         wandb.log({"epoch": epoch, "iter": counter})
@@ -364,6 +381,48 @@ class Model:
             self.data_loader_clss.get_test_batch(batch_size=num_test_items),
         ):
             test_batch = {"cl": batch_cl, "ss": batch_ss, "clss": batch_clss}
+            self.autoencoder.test_batch(test_batch, self.device)
+
+    def train_aaecss_clss_only(
+        self,
+        epochs=10,
+        batch_size=128,
+        test_interval=100,
+        training_settings=None,
+        input_noise=0.0,
+        log_every=100,
+        is_testing=False,
+        mvid=None,
+    ):
+        train_dir, start_epoch = self.initialize_training(
+            batch_size=batch_size,
+            training_settings=training_settings,
+            input_noise=input_noise,
+            mvid=mvid,
+        )
+        model = wandb.Artifact(f"{self.name}_model", type="model")
+        # start training loop
+        iter_for_test = 0
+        iter_for_log = 0
+        for epoch in range(start_epoch, start_epoch + epochs):
+            for batch in self.get_train_batch_clss_only(batch_size):
+                self.autoencoder.train_batch(batch, self.device, input_noise=input_noise)
+                iter_for_test += 1
+                iter_for_log += 1
+                if iter_for_test == test_interval:
+                    iter_for_test = 0
+                    self.test_aaecss_clss()
+                if (iter_for_log + 1) % log_every == 0:
+                    self.log_it(iter_for_log, epoch)
+            self.store_model(model, train_dir, epoch)
+            self.autoencoder.update_training_settings(train_dir)
+        self.finalize_training(train_dir, is_testing=is_testing)
+
+    def test_aaecss_clss_only(self, num_test_items=1):
+        for batch_clss, metadata_clss in self.data_loader_clss.get_test_batch(
+            batch_size=num_test_items
+        ):
+            test_batch = {"clss": batch_clss}
             self.autoencoder.test_batch(test_batch, self.device)
 
     def overfit(self, epochs=1000, num_test_items=1, input_noise=0.0, training_settings=None):
