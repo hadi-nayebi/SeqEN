@@ -86,6 +86,9 @@ class TrainSessionArgParser(DefaultParser):
             "-v", "--verbose", help="Verbose", action="store_true", default=False
         )
         self.parser.add_argument("-le", "--log_every", type=int, help="Log every", default=100)
+        self.parser.add_argument(
+            "-nc", "--no_continuity", help="No Continuity", action="store_true", default=False
+        )
 
 
 class TestSessionArgParser(DefaultParser):

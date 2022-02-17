@@ -13,7 +13,7 @@ from torch import no_grad, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
 from torch import tensor, transpose
-from torch.nn import CrossEntropyLoss, Module, MSELoss, NLLLoss
+from torch.nn import Module, MSELoss, NLLLoss
 from torch.nn.functional import one_hot, unfold
 
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
@@ -25,7 +25,6 @@ from SeqEN2.utils.utils import get_map_location
 
 # class for AE
 class Autoencoder(Module):
-
     aa_keys = "WYFMILVAGPSTCEDQNHRK*"  # amino acids class labels
     d0 = 21  # amino acids class size
 
@@ -46,6 +45,7 @@ class Autoencoder(Module):
         # define customized optimizers
         self.reconstructor_optimizer = None
         self.reconstructor_lr_scheduler = None
+        self.ignore_continuity = False
         self.continuity_optimizer = None
         self.continuity_lr_scheduler = None
         # Loss functions
@@ -210,28 +210,29 @@ class Autoencoder(Module):
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
         # train for continuity
-        self.continuity_optimizer.zero_grad()
-        encoded_output = self.forward_embed(one_hot_input)
-        continuity_loss_r = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
-        )
-        continuity_loss_l = self.criterion_MSELoss(
-            encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
-        )
-        continuity_loss = continuity_loss_r + continuity_loss_l
-        continuity_loss.backward()
-        self.continuity_optimizer.step()
-        self.log("continuity_loss", continuity_loss.item())
-        self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
-        self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-        self.continuity_lr_scheduler.step(continuity_loss.item())
+        if not self.ignore_continuity:
+            self.continuity_optimizer.zero_grad()
+            encoded_output = self.forward_embed(one_hot_input)
+            continuity_loss_r = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+            )
+            continuity_loss_l = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+            )
+            continuity_loss = continuity_loss_r + continuity_loss_l
+            continuity_loss.backward()
+            self.continuity_optimizer.step()
+            self.log("continuity_loss", continuity_loss.item())
+            self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
+            self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+            self.continuity_lr_scheduler.step(continuity_loss.item())
+            del continuity_loss
+            del encoded_output
         # clean up
         del input_ndx
         del one_hot_input
         del reconstructor_loss
         del reconstructor_output
-        del encoded_output
-        del continuity_loss
 
     def test_batch(self, input_vals, device):
         """
@@ -260,12 +261,13 @@ class Autoencoder(Module):
             self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
             self.log("test_consensus_accuracy", consensus_seq_acc)
             # test for continuity
-            encoded_output = self.forward_embed(one_hot_input)
-            continuity_loss_r = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
-            )
-            continuity_loss_l = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
-            )
-            continuity_loss = continuity_loss_r + continuity_loss_l
-            self.log("test_continuity_loss", continuity_loss.item())
+            if not self.ignore_continuity:
+                encoded_output = self.forward_embed(one_hot_input)
+                continuity_loss_r = self.criterion_MSELoss(
+                    encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+                )
+                continuity_loss_l = self.criterion_MSELoss(
+                    encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                )
+                continuity_loss = continuity_loss_r + continuity_loss_l
+                self.log("test_continuity_loss", continuity_loss.item())

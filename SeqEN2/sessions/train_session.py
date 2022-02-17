@@ -71,6 +71,7 @@ class TrainSession:
         input_noise=0.0,
         log_every=100,
         mvid=None,
+        ignore_continuity=False,
     ):
         training_settings = self.load_training_settings(training_settings)
         if self.is_testing:
@@ -85,6 +86,7 @@ class TrainSession:
             log_every=log_every,
             is_testing=self.is_testing,
             mvid=mvid,
+            ignore_continuity=ignore_continuity,
         )
 
     def test(self, num_test_items=1):
@@ -141,6 +143,7 @@ def main(args):
             input_noise=args["Input Noise"],
             log_every=args["Log every"],
             mvid=mvid,
+            ignore_continuity=args["No Continuity"],
         )
 
 
@@ -150,3 +153,7 @@ if __name__ == "__main__":
     parsed_args = parser.parsed()
     system("wandb login")
     main(parsed_args)
+
+# examples :
+# ./SeqEN2/sessions/train_session.py -n dummy -dcl kegg_ndx_ACTp -dss pdb_ndx_ss -dclss pdb_act_clss -a arch8 -e 2
+# -trb 10 -no 0.05 -le 10

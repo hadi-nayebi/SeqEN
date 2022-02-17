@@ -25,14 +25,17 @@ class TestAutoencoder(TestCase):
     device = device("cuda" if cuda.is_available() else "cpu")
     DATASET_NAME_seq_ACTp = "kegg_ndx_ACTp_100"
     DATASET_NAME_seq_ss = "pdb_ndx_ss_100"
+    DATASET_NAME_seq_ss_ACTp = "pdb_act_clss"
     autoencoder = None
     data_loader_ss = None
     data_loader_cl = None
+    data_loader_clss = None
     w = 20
     dn = 10
     d1 = 8
     TEST_KEY_CL = "CO657_07215"
     TEST_KEY_SS = "232L_1_A"
+    TEST_KEY_CLSS = "AF-Q7XVN5-F1-model_v1"
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -42,16 +45,21 @@ class TestAutoencoder(TestCase):
         cls.autoencoder = AdversarialAutoencoderClassifierSSDecoder(cls.d1, cls.dn, cls.w, arch)
         cls.data_loader_cl = DataLoader()
         cls.data_loader_ss = DataLoader()
+        cls.data_loader_clss = DataLoader()
         cls.data_loader_cl.load_test_data(cls.DATASET_NAME_seq_ACTp, cls.device)
         cls.data_loader_cl.load_train_data(cls.DATASET_NAME_seq_ACTp, cls.device)
         cls.data_loader_ss.load_test_data(cls.DATASET_NAME_seq_ss, cls.device)
         cls.data_loader_ss.load_train_data(cls.DATASET_NAME_seq_ss, cls.device)
+        cls.data_loader_clss.load_test_data(cls.DATASET_NAME_seq_ss_ACTp, cls.device)
+        cls.data_loader_clss.load_train_data(cls.DATASET_NAME_seq_ss_ACTp, cls.device)
         # random train sample
         cls.train_batch_cl = list(cls.data_loader_cl.get_train_batch(batch_size=10))[0]
         cls.train_batch_ss = list(cls.data_loader_ss.get_train_batch(batch_size=10))[0]
+        cls.train_batch_clss = list(cls.data_loader_clss.get_train_batch(batch_size=10))[0]
         # fixed test sample
         cls.test_batch_cl = cls.data_loader_cl.get_test_by_key(cls.TEST_KEY_CL)
         cls.test_batch_ss = cls.data_loader_ss.get_test_by_key(cls.TEST_KEY_SS)
+        cls.test_batch_clss = cls.data_loader_clss.get_test_by_key(cls.TEST_KEY_CLSS)
         cls.autoencoder.to(cls.device)
 
     def test_transform_input(self):
@@ -119,10 +127,15 @@ class TestAutoencoder(TestCase):
             self.autoencoder.ds, ss_decoder_output.shape[1], "output4.shape[1] do not match ds"
         )
 
+    #
     def test_train_batch(self):
         # train batch returns data without any metadata
         self.autoencoder.initialize_for_training()
-        input_vals = {"cl": self.train_batch_cl, "ss": self.train_batch_ss}
+        input_vals = {
+            "cl": self.train_batch_cl,
+            "ss": self.train_batch_ss,
+            "clss": self.train_batch_clss,
+        }
         self.autoencoder.train_batch(input_vals, self.device)
 
         # TODO: define a useful assert

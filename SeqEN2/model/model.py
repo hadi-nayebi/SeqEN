@@ -104,7 +104,9 @@ class Model:
         log_every=100,
         is_testing=False,
         mvid=None,
+        ignore_continuity=False,
     ):
+        self.autoencoder.ignore_continuity = ignore_continuity
         assert self.data_loader_cl is not None, "at least dataset0 must be provided"
         if self.autoencoder.arch.type in ["AE", "AAE", "AAEC"]:
             self.train_aaec(
