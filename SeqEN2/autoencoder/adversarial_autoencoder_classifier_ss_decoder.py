@@ -597,9 +597,10 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
                     continuity_loss = continuity_loss_r + continuity_loss_l
                     self.log("test_continuity_loss", continuity_loss.item())
 
-    def embed_batch(self, input_vals, device):
+    def embed_batch(self, input_vals, device, dataset="cl"):
         """
         Test a single batch of data, this will move into autoencoder
+        :param dataset:
         :param device:
         :param input_vals:
         :return:
@@ -607,14 +608,32 @@ class AdversarialAutoencoderClassifierSSDecoder(AdversarialAutoencoderClassifier
         assert isinstance(input_vals, Tensor), "AAECSS requires a tensor as input_vals"
         self.eval()
         with no_grad():
-            # testing with cl data
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
-            (
-                embedding,
-                classifier_output,
-                ss_decoder_output,
-            ) = self.forward_eval_embed(one_hot_input)
-            consensus_ss = get_consensus_seq(
-                argmax(ss_decoder_output, dim=1).reshape((-1, self.w)), device
-            )
-            return embedding, classifier_output, consensus_ss
+            if dataset == "cl":
+                # testing with cl data
+                input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
+                (
+                    embedding,
+                    classifier_output,
+                    ss_decoder_output,
+                ) = self.forward_eval_embed(one_hot_input)
+                consensus_ss = get_consensus_seq(
+                    argmax(ss_decoder_output, dim=1).reshape((-1, self.w)), device
+                )
+                return embedding, classifier_output, consensus_ss
+            elif dataset == "clss":
+                # testing with clss data
+                (
+                    input_ndx,
+                    target_vals_ss,
+                    target_vals_cl,
+                    one_hot_input,
+                ) = self.transform_input_clss(input_vals, device)
+                (
+                    embedding,
+                    classifier_output,
+                    ss_decoder_output,
+                ) = self.forward_eval_embed(one_hot_input)
+                consensus_ss = get_consensus_seq(
+                    argmax(ss_decoder_output, dim=1).reshape((-1, self.w)), device
+                )
+                return embedding, classifier_output, consensus_ss
