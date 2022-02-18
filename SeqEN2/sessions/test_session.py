@@ -88,25 +88,23 @@ class TestSession:
             pickle.dump(self.embedding_results, f)
 
     def get_embedding_all(self):
-        self.embedding_results = {}
-        if self.model.data_loader_cl is not None:
-            for item in self.model.get_embedding_all(dataset="cl"):
-                self.embedding_results[item.attrs["name"]] = item
-        if self.model.data_loader_clss is not None:
-            for item in self.model.get_embedding_all(dataset="clss"):
-                self.embedding_results[item.attrs["name"]] = item
-        filename = (
+        data_dir = (
             self.models_dir
             / self.model.name
             / "versions"
             / self.version
             / f"all_embeddings_only_{self.model_id}"
         )
-        if not filename.exists():
-            filename.mkdir()
-        datafile = filename / f"embeddings.pkl.bz2"
-        with open(datafile, "wb") as f:
-            pickle.dump(self.embedding_results, f)
+        if not data_dir.exists():
+            data_dir.mkdir()
+        if self.model.data_loader_cl is not None:
+            for item in self.model.get_embedding_all(dataset="cl"):
+                datafile = data_dir / f"embeddings_{item.attrs['name']}.pkl.bz2"
+                item.to_pickle(datafile)
+        if self.model.data_loader_clss is not None:
+            for item in self.model.get_embedding_all(dataset="clss"):
+                datafile = data_dir / f"embeddings_{item.attrs['name']}.pkl.bz2"
+                item.to_pickle(datafile)
 
     def tsne_embeddings(self, dim=2):
         # combine embeddings
