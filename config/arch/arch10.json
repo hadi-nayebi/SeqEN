@@ -285,7 +285,7 @@
                                 "type": "ConvTranspose1d",
                                 "in": 32,
                                 "out": 64,
-                                "kernel": 6
+                                "kernel": 8
                         },
                         {
                                 "type": "ReLU"
