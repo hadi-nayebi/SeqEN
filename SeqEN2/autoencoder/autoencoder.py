@@ -91,6 +91,8 @@ class Autoencoder(Module):
                     else:
                         new_training_setting_dict[key] = item
                 self.initialize_for_training(training_settings=new_training_setting_dict)
+                new_training_setting["apply"] = False
+                write_json(new_training_setting, new_training_setting_path)
 
     def forward_encoder_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
