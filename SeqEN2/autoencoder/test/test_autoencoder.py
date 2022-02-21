@@ -41,7 +41,7 @@ class TestAutoencoder(TestCase):
         # random train sample
         cls.train_batch = list(cls.data_loader.get_train_batch(batch_size=10))[0]
         # fixed test sample
-        cls.test_batch = cls.data_loader.get_test_by_key(cls.TEST_KEY)
+        cls.test_batch = cls.data_loader.get_by_key(cls.TEST_KEY)
         cls.autoencoder.to(cls.device)
         # print('from init', cls.autoencoder.training_settings)
 

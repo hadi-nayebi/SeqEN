@@ -105,7 +105,7 @@ class TestSessionArgParser(DefaultParser):
         )
         self.parser.add_argument("-mid", "--model_id", type=int, help="Model ID", required=True)
         # dataset0: seq:act_p, dataset1: seq:ss, dataset2: seq:act_p:ss
-        self.parser.add_argument("-dcl", "--dataset_cl", type=str, help="Dataset_cl", required=True)
+        self.parser.add_argument("-dcl", "--dataset_cl", type=str, help="Dataset_cl", default="")
         self.parser.add_argument("-dss", "--dataset_ss", type=str, help="Dataset_ss", default="")
         self.parser.add_argument(
             "-dclss", "--dataset_clss", type=str, help="Dataset_clss", default=""

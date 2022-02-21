@@ -297,7 +297,8 @@ def main(args):
         w=args["W"],
     )
     # load datafiles
-    test_session.load_data("cl", args["Dataset_cl"])
+    if args["Dataset_cl"] != "":
+        test_session.load_data("cl", args["Dataset_cl"])
     if args["Dataset_ss"] != "":
         test_session.load_data("ss", args["Dataset_ss"])
     if args["Dataset_clss"] != "":
