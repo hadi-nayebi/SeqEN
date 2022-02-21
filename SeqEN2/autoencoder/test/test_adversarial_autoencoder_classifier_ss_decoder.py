@@ -30,7 +30,7 @@ class TestAutoencoder(TestCase):
     data_loader_ss = None
     data_loader_cl = None
     data_loader_clss = None
-    w = 20
+    w = 30
     dn = 10
     d1 = 8
     TEST_KEY_CL = "CO657_07215"
@@ -40,7 +40,7 @@ class TestAutoencoder(TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         # replace arch1.json to test other ones
-        arch_path = cls.root / "config" / "arch" / "arch9.json"
+        arch_path = cls.root / "config" / "arch" / "arch10.json"
         arch = Architecture(read_json(str(arch_path)))
         cls.autoencoder = AdversarialAutoencoderClassifierSSDecoder(cls.d1, cls.dn, cls.w, arch)
         cls.data_loader_cl = DataLoader()
