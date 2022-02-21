@@ -35,6 +35,8 @@ def read_fasta(filename) -> dict:
 
 def read_json(filename) -> dict:
     """Read json files and return a dict. (.json, .json.gz)"""
+    if isinstance(filename, Path):
+        filename = str(filename)
     if filename.endswith(".json.gz"):
         with gzip.open(filename, "r") as file:
             json_bytes = file.read()
@@ -49,6 +51,8 @@ def read_json(filename) -> dict:
 
 def write_json(data_dict, filename, encoder=None) -> None:
     """Write json file from a dict, encoding numpy arrays. (.json, .json.gz)"""
+    if isinstance(filename, Path):
+        filename = str(filename)
     if encoder == "numpy":
         encoder = NumpyEncoder
     elif encoder is None:
