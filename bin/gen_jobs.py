@@ -25,7 +25,7 @@ dataset_clss_arg = "-dclss pdb_act_clss" if pass_dataset_clss == "1" else ""
 noise_arg = "-no 0.05" if train_with_noise == "1" else ""
 
 
-# system(f"mkdir exp{job_id}_jobs")
+system(f"mkdir exp{job_id}_jobs")
 
 
 for mid_val in range(0, 1000, 5):
