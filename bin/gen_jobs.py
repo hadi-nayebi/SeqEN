@@ -1,3 +1,4 @@
+from os import system
 from sys import argv
 
 # job params
@@ -23,6 +24,9 @@ dataset_ss = "dataset_ss=pdb_ndx_ss" if pass_dataset_ss == "1" else ""
 dataset_clss = "dataset_clss=pdb_act_clss" if pass_dataset_clss == "1" else ""
 
 noise_val = 0.05 if train_with_noise == "1" else 0.00
+
+
+system(f"mkdir exp{job_id}_jobs")
 
 
 for mid_val in range(0, 16, 5):
@@ -70,5 +74,5 @@ sbatch {next_job}.sb
 
 """
 
-    with open(f"{mid}.sb", "w") as file:
+    with open(f"./exp{job_id}_jobs/{mid}.sb", "w") as file:
         file.write(job_script_template)
