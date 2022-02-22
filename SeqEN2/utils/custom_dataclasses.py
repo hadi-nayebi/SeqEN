@@ -34,6 +34,11 @@ def nested_deco(*args, **kwargs):
         o_init = check_class.__init__
 
         def __init__(self, *args, **kwargs):
+            # getting class fields to filter extra keys
+            class_fields = {f.name for f in fields(check_class)}
+            for key in list(kwargs.keys()):
+                if key not in class_fields:
+                    del kwargs[key]
             for name, value in kwargs.items():
                 # getting field type
                 ft = check_class.__annotations__.get(name, None)
