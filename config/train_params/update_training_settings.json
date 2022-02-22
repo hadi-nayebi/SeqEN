@@ -1,27 +1,27 @@
 {
-        "apply": true,
+        "apply": false,
         "reconstructor": {
                 "lr": 0.01,
-                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
+                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
         },
         "generator": {
                 "lr": 0.01,
-                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
+                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
         },
         "discriminator": {
                 "lr": 0.01,
-                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
+                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
         },
         "classifier": {
                 "lr": 0.01,
-                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
+                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
         },
         "ss_decoder": {
                 "lr": 0.01,
-                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
+                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
         },
         "continuity": {
                 "lr": 0.01,
-                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.01}
+                "params": {"lr": 0.01, "factor": 0.99, "patience": 1000, "min_lr": 0.001}
         }
 }
