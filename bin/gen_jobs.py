@@ -48,7 +48,7 @@ conda activate SeqEN
 cd /mnt/home/nayebiga/SeqEncoder/SeqEN/
 module load GCCcore/11.1.0 Python/3.9.6
 module load GCC/11.1.0-cuda-11.4.2  CUDA/11.4.2
-python3 ./SeqEN2/sessions/train_session.py -n experiment{job_id} {dataset_cl_arg} {dataset_ss_arg} {dataset_clss_arg} {arch} {noise_arg} {mvid_arg} {nc} -trb 10 -w 20 -d1 8 -ts params4 -ti 100 -le 1000 -e 5 {mvid_arg}
+python3 ./SeqEN2/sessions/train_session.py -n experiment{job_id} {dataset_cl_arg} {dataset_ss_arg} {dataset_clss_arg} {arch} {noise_arg} {nc} -trb 10 -w 20 -d1 8 -ts params4 -ti 100 -le 1000 -e 5 {mvid_arg}
 
 scontrol show job $SLURM_JOB_ID                                       ### write job information to SLURM output file.
 js -j $SLURM_JOB_ID                                                   ### write resource usage to SLURM output file (powertools command).
