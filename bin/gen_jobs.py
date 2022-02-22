@@ -9,7 +9,6 @@ force_continuity = argv[3]  # 0 or 1
 pass_dataset_cl = argv[4]  # 0 or 1
 pass_dataset_ss = argv[5]  # 0 or 1
 pass_dataset_clss = argv[6]  # 0 or 1
-train_with_noise = argv[7]  # 0 or 1
 arch = argv[8]  # arch20
 
 
@@ -29,7 +28,7 @@ noise_val = 0.05 if train_with_noise == "1" else 0.00
 system(f"mkdir exp{job_id}_jobs")
 
 
-for mid_val in range(0, 16, 5):
+for mid_val in range(0, 1000, 5):
     mid = mid_val if mid_val == 0 else mid_val - 1
     mvid = "-mvid ${mvid}" if mid > 3 else ""
     mvid_arg = f"mvid=VERSION#{mid}" if mid > 3 else ""
