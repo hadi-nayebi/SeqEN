@@ -9,7 +9,7 @@ force_continuity = argv[3]  # 0 or 1
 pass_dataset_cl = argv[4]  # 0 or 1
 pass_dataset_ss = argv[5]  # 0 or 1
 pass_dataset_clss = argv[6]  # 0 or 1
-arch = argv[8]  # arch20
+arch = argv[7]  # arch20
 
 
 noise = "n" if train_with_noise == "1" else "0"
