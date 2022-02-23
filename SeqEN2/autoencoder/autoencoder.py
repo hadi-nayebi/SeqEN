@@ -244,26 +244,29 @@ class Autoencoder(Module):
         assert isinstance(input_vals, Dict), "AE requires a dict as input_vals"
         self.train()
         if "cl" in input_vals.keys():
-            input_ndx, _, _, one_hot_input = self.transform_input(
-                input_vals["cl"], device, input_noise=input_noise, input_keys="S--"
-            )
-            self.train_reconstructor(one_hot_input, input_ndx)
-            # train for continuity
-            self.train_continuity(one_hot_input)
+            if input_vals["cl"] is not None:
+                input_ndx, _, _, one_hot_input = self.transform_input(
+                    input_vals["cl"], device, input_noise=input_noise, input_keys="S--"
+                )
+                self.train_reconstructor(one_hot_input, input_ndx)
+                # train for continuity
+                self.train_continuity(one_hot_input)
         if "ss" in input_vals.keys():
-            input_ndx, _, _, one_hot_input = self.transform_input(
-                input_vals["ss"], device, input_noise=input_noise, input_keys="S--"
-            )
-            self.train_reconstructor(one_hot_input, input_ndx)
-            # train for continuity
-            self.train_continuity(one_hot_input)
+            if input_vals["ss"] is not None:
+                input_ndx, _, _, one_hot_input = self.transform_input(
+                    input_vals["ss"], device, input_noise=input_noise, input_keys="S--"
+                )
+                self.train_reconstructor(one_hot_input, input_ndx)
+                # train for continuity
+                self.train_continuity(one_hot_input)
         if "clss" in input_vals.keys():
-            input_ndx, _, _, one_hot_input = self.transform_input(
-                input_vals["clss"], device, input_noise=input_noise, input_keys="S--"
-            )
-            self.train_reconstructor(one_hot_input, input_ndx)
-            # train for continuity
-            self.train_continuity(one_hot_input)
+            if input_vals["clss"] is not None:
+                input_ndx, _, _, one_hot_input = self.transform_input(
+                    input_vals["clss"], device, input_noise=input_noise, input_keys="S--"
+                )
+                self.train_reconstructor(one_hot_input, input_ndx)
+                # train for continuity
+                self.train_continuity(one_hot_input)
 
     def test_reconstructor(self, one_hot_input, input_ndx, device):
         reconstructor_output = self.forward_test(one_hot_input)
@@ -302,23 +305,26 @@ class Autoencoder(Module):
         self.eval()
         with no_grad():
             if "cl" in input_vals.keys():
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["cl"], device, input_keys="S--"
-                )
-                self.test_reconstructor(one_hot_input, input_ndx, device)
-                # test for continuity
-                self.test_continuity(one_hot_input)
+                if input_vals["cl"] is not None:
+                    input_ndx, _, _, one_hot_input = self.transform_input(
+                        input_vals["cl"], device, input_keys="S--"
+                    )
+                    self.test_reconstructor(one_hot_input, input_ndx, device)
+                    # test for continuity
+                    self.test_continuity(one_hot_input)
             if "ss" in input_vals.keys():
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["ss"], device, input_keys="S--"
-                )
-                self.test_reconstructor(one_hot_input, input_ndx, device)
-                # test for continuity
-                self.test_continuity(one_hot_input)
+                if input_vals["ss"] is not None:
+                    input_ndx, _, _, one_hot_input = self.transform_input(
+                        input_vals["ss"], device, input_keys="S--"
+                    )
+                    self.test_reconstructor(one_hot_input, input_ndx, device)
+                    # test for continuity
+                    self.test_continuity(one_hot_input)
             if "clss" in input_vals.keys():
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["clss"], device, input_keys="S--"
-                )
-                self.test_reconstructor(one_hot_input, input_ndx, device)
-                # test for continuity
-                self.test_continuity(one_hot_input)
+                if input_vals["clss"] is not None:
+                    input_ndx, _, _, one_hot_input = self.transform_input(
+                        input_vals["clss"], device, input_keys="S--"
+                    )
+                    self.test_reconstructor(one_hot_input, input_ndx, device)
+                    # test for continuity
+                    self.test_continuity(one_hot_input)
