@@ -44,9 +44,10 @@ class Model:
         self.device = device("cuda" if cuda.is_available() else "cpu")
         self.autoencoder = None
         self.build_model(arch)
-        self.data_loader_cl = None
-        self.data_loader_ss = None
-        self.data_loader_clss = None
+        # load datafiles
+        self.data_loader_cl = DataLoader()
+        self.data_loader_ss = DataLoader()
+        self.data_loader_clss = DataLoader()
         self.dataset_name_cl = None
         self.dataset_name_ss = None
         self.dataset_name_clss = None
@@ -75,10 +76,6 @@ class Model:
         :param dataset_name:
         :return:
         """
-        # load datafiles
-        self.data_loader_cl = DataLoader()
-        self.data_loader_ss = DataLoader()
-        self.data_loader_clss = DataLoader()
         assert key in ["cl", "ss", "clss"], "unknown key for dataset"
         if key == "cl":
             self.data_loader_cl.load_test_data(dataset_name, self.device)
