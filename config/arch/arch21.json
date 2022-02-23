@@ -1,6 +1,6 @@
 {
         "name": "arch21",
-        "type": "AAE",
+        "type": "AE",
         "vectorizer": [
                         {
                                 "type": "Linear",
