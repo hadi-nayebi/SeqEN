@@ -152,7 +152,7 @@ class DataLoader(object):
     def get_test_batch(self, batch_size=1, test_items=None) -> (tensor, dict):
         if self._test_data is None:
             for i in range(batch_size):
-                yield None
+                yield None, None
         elif test_items is not None:
             for key in test_items:
                 yield self._test_data[key]
