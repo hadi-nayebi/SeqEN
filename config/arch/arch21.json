@@ -87,48 +87,6 @@
                                 "out": 20
                         }
                 ],
-        "discriminator": [
-                        {
-                                "type": "Linear",
-                                "in": 10,
-                                "out": 256
-                        },
-                        {
-                                "type": "ReLU"
-                        },
-                        {
-                                "type": "Linear",
-                                "in": 256,
-                                "out": 256
-                        },
-                        {
-                                "type": "ReLU"
-                        },
-                        {
-                                "type": "Linear",
-                                "in": 256,
-                                "out": 256
-                        },
-                        {
-                                "type": "ReLU"
-                        },
-                        {
-                                "type": "Linear",
-                                "in": 256,
-                                "out": 256
-                        },
-                        {
-                                "type": "ReLU"
-                        },
-                        {
-                                "type": "Linear",
-                                "in": 256,
-                                "out": 2
-                        },
-                        {
-                                "type": "LogSoftmax"
-                        }
-                ],
         "devectorizer": [
                         {
                                 "type": "Linear",
