@@ -6,7 +6,7 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from torch import argmax, cat
+from torch import argmax
 from torch import load as torch_load
 from torch import no_grad, ones, optim, randperm
 from torch import save as torch_save
