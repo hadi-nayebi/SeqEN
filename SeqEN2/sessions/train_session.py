@@ -14,6 +14,7 @@ from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import read_json
 from SeqEN2.model.model import Model
 from SeqEN2.utils.custom_arg_parser import TrainSessionArgParser
+from SeqEN2.utils.utils import set_random_seed
 
 
 class TrainSession:
@@ -104,6 +105,7 @@ class TrainSession:
 
 def main(args):
     # session
+    set_random_seed(args["Random Seed"])
     train_session = TrainSession(is_testing=args["Is Testing"])
     train_session.add_model(
         args["Model Name"],

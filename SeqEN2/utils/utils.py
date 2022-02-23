@@ -1,4 +1,5 @@
-from torch import cuda
+from numpy.random import seed
+from torch import cuda, manual_seed
 
 
 def get_map_location():
@@ -7,3 +8,8 @@ def get_map_location():
     else:
         map_location = "cpu"
     return map_location
+
+
+def set_random_seed(num):
+    seed(num)
+    manual_seed(num)

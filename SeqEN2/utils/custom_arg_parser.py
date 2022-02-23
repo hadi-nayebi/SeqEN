@@ -89,6 +89,7 @@ class TrainSessionArgParser(DefaultParser):
         self.parser.add_argument(
             "-nc", "--no_continuity", help="No Continuity", action="store_true", default=False
         )
+        self.parser.add_argument("-s", "--seed", type=int, help="Random Seed", default=0)
 
 
 class TestSessionArgParser(DefaultParser):
