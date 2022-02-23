@@ -233,6 +233,11 @@ class Autoencoder(Module):
             self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
             self.continuity_lr_scheduler.step(continuity_loss.item())
 
+    def train_one_batch(self, one_hot_input, input_ndx, device=None):
+        self.train_reconstructor(one_hot_input, input_ndx)
+        # train for continuity
+        self.train_continuity(one_hot_input)
+
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
         Training for one batch of data, this will move into autoencoder module
@@ -248,25 +253,19 @@ class Autoencoder(Module):
                 input_ndx, _, _, one_hot_input = self.transform_input(
                     input_vals["cl"], device, input_noise=input_noise, input_keys="S--"
                 )
-                self.train_reconstructor(one_hot_input, input_ndx)
-                # train for continuity
-                self.train_continuity(one_hot_input)
+                self.train_one_batch(one_hot_input, input_ndx)
         if "ss" in input_vals.keys():
             if input_vals["ss"] is not None:
                 input_ndx, _, _, one_hot_input = self.transform_input(
                     input_vals["ss"], device, input_noise=input_noise, input_keys="S--"
                 )
-                self.train_reconstructor(one_hot_input, input_ndx)
-                # train for continuity
-                self.train_continuity(one_hot_input)
+                self.train_one_batch(one_hot_input, input_ndx)
         if "clss" in input_vals.keys():
             if input_vals["clss"] is not None:
                 input_ndx, _, _, one_hot_input = self.transform_input(
                     input_vals["clss"], device, input_noise=input_noise, input_keys="S--"
                 )
-                self.train_reconstructor(one_hot_input, input_ndx)
-                # train for continuity
-                self.train_continuity(one_hot_input)
+                self.train_one_batch(one_hot_input, input_ndx)
 
     def test_reconstructor(self, one_hot_input, input_ndx, device):
         reconstructor_output = self.forward_test(one_hot_input)
@@ -296,6 +295,11 @@ class Autoencoder(Module):
             continuity_loss = continuity_loss_r + continuity_loss_l
             self.log("test_continuity_loss", continuity_loss.item())
 
+    def test_one_batch(self, one_hot_input, input_ndx, device):
+        self.test_reconstructor(one_hot_input, input_ndx, device)
+        # test for continuity
+        self.test_continuity(one_hot_input)
+
     def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
@@ -309,22 +313,16 @@ class Autoencoder(Module):
                     input_ndx, _, _, one_hot_input = self.transform_input(
                         input_vals["cl"], device, input_keys="S--"
                     )
-                    self.test_reconstructor(one_hot_input, input_ndx, device)
-                    # test for continuity
-                    self.test_continuity(one_hot_input)
+                    self.test_one_batch(one_hot_input, input_ndx, device)
             if "ss" in input_vals.keys():
                 if input_vals["ss"] is not None:
                     input_ndx, _, _, one_hot_input = self.transform_input(
                         input_vals["ss"], device, input_keys="S--"
                     )
-                    self.test_reconstructor(one_hot_input, input_ndx, device)
-                    # test for continuity
-                    self.test_continuity(one_hot_input)
+                    self.test_one_batch(one_hot_input, input_ndx, device)
             if "clss" in input_vals.keys():
                 if input_vals["clss"] is not None:
                     input_ndx, _, _, one_hot_input = self.transform_input(
                         input_vals["clss"], device, input_keys="S--"
                     )
-                    self.test_reconstructor(one_hot_input, input_ndx, device)
-                    # test for continuity
-                    self.test_continuity(one_hot_input)
+                    self.test_one_batch(one_hot_input, input_ndx, device)
