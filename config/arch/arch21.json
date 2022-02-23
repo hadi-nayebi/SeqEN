@@ -11,39 +11,13 @@
                                 "type": "Tanh"
                         }
                 ],
-        "encoder": [
-                        {
-                                "type": "Conv1d",
-                                "in": 8,
-                                "out": 128,
-                                "kernel": 8
-                        },
-                        {
-                                "type": "Tanh"
-                        },
-                        {
-                                "type": "MaxPool1d",
-                                "kernel": 2
-                        },
-                        {
-                                "type": "Conv1d",
-                                "in": 128,
-                                "out": 128,
-                                "kernel": 3
-                        },
-                        {
-                                "type": "Tanh"
-                        },
-                        {
-                                "type": "MaxPool1d",
-                                "kernel": 2
-                        },
+        "encoder":[
                         {
                                 "type": "Flatten"
                         },
                         {
                                 "type": "Linear",
-                                "in": 256,
+                                "in": 160,
                                 "out": 256
                         },
                         {
@@ -102,33 +76,15 @@
                         {
                                 "type": "Linear",
                                 "in": 256,
-                                "out": 256
+                                "out": 160
                         },
                         {
                                 "type": "ReLU"
                         },
                         {
                                 "type": "Unflatten",
-                                "in": 32,
-                                "out": 8
-                        },
-                        {
-                                "type": "ConvTranspose1d",
-                                "in": 32,
-                                "out": 64,
-                                "kernel": 6
-                        },
-                        {
-                                "type": "ReLU"
-                        },
-                        {
-                                "type": "ConvTranspose1d",
-                                "in": 64,
-                                "out": 8,
-                                "kernel": 8
-                        },
-                        {
-                                "type": "ReLU"
+                                "in": 8,
+                                "out": 20
                         }
                 ],
         "discriminator": [
