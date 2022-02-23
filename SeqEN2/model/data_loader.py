@@ -127,7 +127,7 @@ class DataLoader(object):
             self._train_data[key] = to_tensor(self._train_data[key], key, device)
         self.train_data_size = len(self._train_data)
 
-    def get_train_batch(self, batch_size=128, max_size=None) -> array:
+    def get_train_batch(self, batch_size=128, max_size=None) -> tensor:
         if self._train_data is None:
             num_batch = max_size // batch_size
             for i in range(num_batch):
@@ -151,7 +151,7 @@ class DataLoader(object):
 
     def get_test_batch(self, batch_size=1, test_items=None) -> (tensor, dict):
         if self._test_data is None:
-            for i in range(test_items):
+            for i in range(batch_size):
                 yield None
         elif test_items is not None:
             for key in test_items:
