@@ -99,8 +99,8 @@ class DataLoader(object):
         self._train_data = None
         self._test_data = None
         self.test_data_keys = None
-        self.train_data_size = None
-        self.test_data_size = None
+        self.train_data_size = 0
+        self.test_data_size = 0
 
     @property
     def train_data(self) -> dict:
@@ -128,21 +128,32 @@ class DataLoader(object):
         self.train_data_size = len(self._train_data)
 
     def get_train_batch(self, batch_size=128, max_size=None) -> array:
-        keys = permutation(list(self._train_data.keys()))
-        keys_len = len(keys)
-        num_batch = keys_len // batch_size
-        if max_size is not None:
+        if self._train_data is None:
             num_batch = max_size // batch_size
-            if max_size > keys_len:
-                repeat_data_fold = (max_size // keys_len) + 1
-                keys = concatenate([keys] * repeat_data_fold, axis=0)
-        for i in range(num_batch):
-            yield join(
-                [self._train_data[key][0] for key in keys[i * batch_size : (i + 1) * batch_size]]
-            )
+            for i in range(num_batch):
+                yield None
+        else:
+            keys = permutation(list(self._train_data.keys()))
+            keys_len = len(keys)
+            num_batch = keys_len // batch_size
+            if max_size is not None:
+                num_batch = max_size // batch_size
+                if max_size > keys_len:
+                    repeat_data_fold = (max_size // keys_len) + 1
+                    keys = concatenate([keys] * repeat_data_fold, axis=0)
+            for i in range(num_batch):
+                yield join(
+                    [
+                        self._train_data[key][0]
+                        for key in keys[i * batch_size : (i + 1) * batch_size]
+                    ]
+                )
 
     def get_test_batch(self, batch_size=1, test_items=None) -> (tensor, dict):
-        if test_items is not None:
+        if self._test_data is None:
+            for i in range(test_items):
+                yield None
+        elif test_items is not None:
             for key in test_items:
                 yield self._test_data[key]
         else:

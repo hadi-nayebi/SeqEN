@@ -165,22 +165,34 @@ class Autoencoder(Module):
         self.training_settings = training_settings
         self.initialize_training_components()
 
-    def transform_input(self, input_vals, device, input_noise=0.0):
+    def transform_input(self, input_vals, device, input_noise=0.0, input_keys="S--"):
+        # input_keys = "S--" : sequence, "SC-" sequence:class, "SS-" sequence:ss, "SCS" seq:class:ss, "
         # scans by sliding window of w
-        assert isinstance(input_vals, Tensor)
+        assert isinstance(input_vals, Tensor), f"expected Tensor type, received {type(input_vals)}"
         kernel_size = (input_vals.shape[1], self.w)
-        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=kernel_size)[0].T
+        input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
         input_ndx = input_vals[:, : self.w].long()
+        target_vals_ss = None
+        target_vals_cl = None
+        if input_keys[1] == "S":
+            target_vals_ss = input_vals[:, self.w : -self.w].long()
+        elif input_keys[2] == "S":
+            target_vals_ss = input_vals[:, -self.w :].long()
+        if input_keys[1] == "C":
+            target_vals_cl = input_vals[:, self.w : -self.w].mean(axis=1).reshape((-1, 1))
+            target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
+        elif input_keys[2] == "C":
+            target_vals_cl = input_vals[:, -self.w :].mean(axis=1).reshape((-1, 1))
+            target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
+        # one-hot vec input
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
             ndx = randperm(self.w)
             size = list(one_hot_input.shape)
             size[-1] = 1
             p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
-            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
-            return input_ndx, mutated_one_hot
-        else:
-            return input_ndx, one_hot_input
+            one_hot_input = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
+        return input_ndx, target_vals_ss, target_vals_cl, one_hot_input
 
     def log(self, key, value):
         if key in self.logs.keys():
@@ -191,16 +203,7 @@ class Autoencoder(Module):
     def reset_log(self):
         self.logs = {}
 
-    def train_batch(self, input_vals, device, input_noise=0.0):
-        """
-        Training for one batch of data, this will move into autoencoder module
-        :param input_vals:
-        :param device:
-        :param input_noise:
-        :return:
-        """
-        self.train()
-        input_ndx, one_hot_input = self.transform_input(input_vals, device, input_noise=input_noise)
+    def train_reconstructor(self, one_hot_input, input_ndx):
         # train encoder_decoder
         self.reconstructor_optimizer.zero_grad()
         reconstructor_output = self.forward_encoder_decoder(one_hot_input)
@@ -211,7 +214,8 @@ class Autoencoder(Module):
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
         self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-        # train for continuity
+
+    def train_continuity(self, one_hot_input):
         if not self.ignore_continuity:
             self.continuity_optimizer.zero_grad()
             encoded_output = self.forward_embed(one_hot_input)
@@ -228,13 +232,66 @@ class Autoencoder(Module):
             self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
             self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
             self.continuity_lr_scheduler.step(continuity_loss.item())
-            del continuity_loss
-            del encoded_output
-        # clean up
-        del input_ndx
-        del one_hot_input
-        del reconstructor_loss
-        del reconstructor_output
+
+    def train_batch(self, input_vals, device, input_noise=0.0):
+        """
+        Training for one batch of data, this will move into autoencoder module
+        :param input_vals:
+        :param device:
+        :param input_noise:
+        :return:
+        """
+        assert isinstance(input_vals, Dict), "AE requires a dict as input_vals"
+        self.train()
+        if "cl" in input_vals.keys():
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals["cl"], device, input_noise=input_noise, input_keys="S--"
+            )
+            self.train_reconstructor(one_hot_input, input_ndx)
+            # train for continuity
+            self.train_continuity(one_hot_input)
+        if "ss" in input_vals.keys():
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals["ss"], device, input_noise=input_noise, input_keys="S--"
+            )
+            self.train_reconstructor(one_hot_input, input_ndx)
+            # train for continuity
+            self.train_continuity(one_hot_input)
+        if "clss" in input_vals.keys():
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals["clss"], device, input_noise=input_noise, input_keys="S--"
+            )
+            self.train_reconstructor(one_hot_input, input_ndx)
+            # train for continuity
+            self.train_continuity(one_hot_input)
+
+    def test_reconstructor(self, one_hot_input, input_ndx, device):
+        reconstructor_output = self.forward_test(one_hot_input)
+        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
+        # reconstructor acc
+        reconstructor_ndx = argmax(reconstructor_output, dim=1)
+        reconstructor_accuracy = (
+            torch_sum(reconstructor_ndx == input_ndx.reshape((-1,))) / reconstructor_ndx.shape[0]
+        )
+        consensus_seq_acc, _ = consensus_acc(
+            input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
+        )
+        # reconstruction_loss, discriminator_loss, classifier_loss
+        self.log("test_reconstructor_loss", reconstructor_loss.item())
+        self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
+        self.log("test_consensus_accuracy", consensus_seq_acc)
+
+    def test_continuity(self, one_hot_input):
+        if not self.ignore_continuity:
+            encoded_output = self.forward_embed(one_hot_input)
+            continuity_loss_r = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+            )
+            continuity_loss_l = self.criterion_MSELoss(
+                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+            )
+            continuity_loss = continuity_loss_r + continuity_loss_l
+            self.log("test_continuity_loss", continuity_loss.item())
 
     def test_batch(self, input_vals, device):
         """
@@ -244,32 +301,24 @@ class Autoencoder(Module):
         """
         self.eval()
         with no_grad():
-            input_ndx, one_hot_input = self.transform_input(input_vals, device)
-            reconstructor_output = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
-            # test for continuity
-            if not self.ignore_continuity:
-                encoded_output = self.forward_embed(one_hot_input)
-                continuity_loss_r = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+            if "cl" in input_vals.keys():
+                input_ndx, _, _, one_hot_input = self.transform_input(
+                    input_vals["cl"], device, input_keys="S--"
                 )
-                continuity_loss_l = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                self.test_reconstructor(one_hot_input, input_ndx, device)
+                # test for continuity
+                self.test_continuity(one_hot_input)
+            if "ss" in input_vals.keys():
+                input_ndx, _, _, one_hot_input = self.transform_input(
+                    input_vals["ss"], device, input_keys="S--"
                 )
-                continuity_loss = continuity_loss_r + continuity_loss_l
-                self.log("test_continuity_loss", continuity_loss.item())
+                self.test_reconstructor(one_hot_input, input_ndx, device)
+                # test for continuity
+                self.test_continuity(one_hot_input)
+            if "clss" in input_vals.keys():
+                input_ndx, _, _, one_hot_input = self.transform_input(
+                    input_vals["clss"], device, input_keys="S--"
+                )
+                self.test_reconstructor(one_hot_input, input_ndx, device)
+                # test for continuity
+                self.test_continuity(one_hot_input)
