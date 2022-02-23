@@ -141,7 +141,7 @@ class Model:
         else:
             start_epoch = int(mvid[1]) + 1
         # connect to wandb
-        run_title = f"{timestamp}_{model_type}_{arch_name}"
+        run_title = f"{timestamp}_{model_type}_{arch_name}_{start_epoch}"
         wandb.init(project=self.name, name=run_title)
         self.config = wandb.config
         self.config.batch_size = batch_size
