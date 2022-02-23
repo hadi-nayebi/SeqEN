@@ -85,7 +85,7 @@ class LayerMaker(object):
         elif layer["type"] == "ReLU":
             return ReLU()
         elif layer["type"] == "Conv1d":
-            return Conv1d(layer["in"], layer["out"], layer["kernel"])
+            return Conv1d(layer["in"], layer["out"], layer["kernel"], padding="same", bias=False)
         elif layer["type"] == "LogSoftmax":
             return LogSoftmax(dim=1)
         elif layer["type"] == "Softmax":
