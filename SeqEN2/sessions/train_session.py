@@ -73,6 +73,7 @@ class TrainSession:
         log_every=100,
         mvid=None,
         ignore_continuity=False,
+        save_model_interval=1,
     ):
         training_settings = self.load_training_settings(training_settings)
         if self.is_testing:
@@ -88,6 +89,7 @@ class TrainSession:
             is_testing=self.is_testing,
             mvid=mvid,
             ignore_continuity=ignore_continuity,
+            save_model_interval=save_model_interval,
         )
 
     def test(self, num_test_items=1):
@@ -147,6 +149,7 @@ def main(args):
             log_every=args["Log every"],
             mvid=mvid,
             ignore_continuity=args["No Continuity"],
+            save_model_interval=args["Save Model Interval"],
         )
 
 

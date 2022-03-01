@@ -186,6 +186,7 @@ class Model:
         is_testing=False,
         mvid=None,
         ignore_continuity=False,
+        save_model_interval=1,
     ):
         self.autoencoder.ignore_continuity = ignore_continuity
         train_dir, start_epoch = self.initialize_training(
@@ -213,7 +214,7 @@ class Model:
                     self.test()
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
-            if epoch % 10 == 0:
+            if epoch % save_model_interval == 0:
                 self.store_model(model, train_dir, epoch)
             self.autoencoder.update_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)

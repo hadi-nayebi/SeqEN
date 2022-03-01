@@ -90,6 +90,9 @@ class TrainSessionArgParser(DefaultParser):
             "-nc", "--no_continuity", help="No Continuity", action="store_true", default=False
         )
         self.parser.add_argument("-s", "--seed", type=int, help="Random Seed", default=0)
+        self.parser.add_argument(
+            "-smi", "--save_model_interval", type=int, help="Save Model Interval", default=1
+        )
 
 
 class TestSessionArgParser(DefaultParser):
