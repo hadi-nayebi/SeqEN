@@ -1,5 +1,5 @@
 {
-        "name": "arch30",
+        "name": "arch32",
         "type": "AE",
         "vectorizer": [
                         {
@@ -18,6 +18,22 @@
                         {
                                 "type": "Linear",
                                 "in": 160,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
                                 "out": 10
                         },
                         {
@@ -28,6 +44,22 @@
                         {
                                 "type": "Linear",
                                 "in": 10,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
                                 "out": 160
                         },
                         {
