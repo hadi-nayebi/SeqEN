@@ -213,7 +213,8 @@ class Model:
                     self.test()
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
-            self.store_model(model, train_dir, epoch)
+            if epoch % 5 == 0:
+                self.store_model(model, train_dir, epoch)
             self.autoencoder.update_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
