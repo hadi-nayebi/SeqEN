@@ -1,0 +1,52 @@
+{
+        "name": "arch21",
+        "type": "AE",
+        "vectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 21,
+                                "out": 8
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "encoder":[
+                        {
+                                "type": "Flatten"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 160,
+                                "out": 10
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "decoder": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 160
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Unflatten",
+                                "in": 8,
+                                "out": 20
+                        }
+                ],
+        "devectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 8,
+                                "out": 21
+                        },
+                        {
+                                "type": "LogSoftmax"
+                        }
+                ]
+}
