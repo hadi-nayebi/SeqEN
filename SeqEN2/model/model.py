@@ -25,6 +25,7 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier_ss_decoder import (
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.model.data_loader import DataLoader
 from SeqEN2.utils.seq_tools import sliding_window
+from SeqEN2.utils.utils import set_random_seed
 
 
 class Model:
@@ -125,6 +126,7 @@ class Model:
         mvid=None,
         ignore_continuity=False,
     ):
+        set_random_seed(0)
         if mvid is None:
             timestamp = datetime.now().strftime("%Y%m%d%H%M")
         else:
