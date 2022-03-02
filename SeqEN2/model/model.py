@@ -123,6 +123,7 @@ class Model:
         training_settings=None,
         input_noise=0.0,
         mvid=None,
+        ignore_continuity=False,
     ):
         if mvid is None:
             timestamp = datetime.now().strftime("%Y%m%d%H%M")
@@ -146,6 +147,7 @@ class Model:
         self.config.dataset_name_cl = self.dataset_name_cl
         self.config.dataset_name_ss = self.dataset_name_ss
         self.config.dataset_name_clss = self.dataset_name_clss
+        self.config.ignore_continuity = ignore_continuity
         self.autoencoder.initialize_for_training(training_settings=training_settings)
         self.config.training_settings = self.autoencoder.training_settings.to_dict()
         self.config.model_type = model_type
@@ -194,6 +196,7 @@ class Model:
             training_settings=training_settings,
             input_noise=input_noise,
             mvid=mvid,
+            ignore_continuity=ignore_continuity,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
