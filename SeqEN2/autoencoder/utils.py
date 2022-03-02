@@ -75,9 +75,8 @@ class LayerMaker(object):
     @staticmethod
     def make_layer(layer):
         if layer["type"] == "Linear":
-            if "bias" in layer.keys():
-                return Linear(layer["in"], layer["out"], bias=layer["bias"])
-            return Linear(layer["in"], layer["out"])
+            bias = layer.get("bias", True)
+            return Linear(layer["in"], layer["out"], bias=bias)
         elif layer["type"] == "Tanh":
             return Tanh()
         elif layer["type"] == "Sigmoid":
@@ -85,7 +84,9 @@ class LayerMaker(object):
         elif layer["type"] == "ReLU":
             return ReLU()
         elif layer["type"] == "Conv1d":
-            return Conv1d(layer["in"], layer["out"], layer["kernel"], padding="same", bias=False)
+            bias = layer.get("bias", True)
+            padding = layer.get("padding", 0)
+            return Conv1d(layer["in"], layer["out"], layer["kernel"], padding=padding, bias=bias)
         elif layer["type"] == "LogSoftmax":
             return LogSoftmax(dim=1)
         elif layer["type"] == "Softmax":
@@ -97,7 +98,8 @@ class LayerMaker(object):
         elif layer["type"] == "Unflatten":
             return Unflatten(1, (layer["in"], layer["out"]))
         elif layer["type"] == "ConvTranspose1d":
-            return ConvTranspose1d(layer["in"], layer["out"], layer["kernel"])
+            padding = layer.get("padding", 0)
+            return ConvTranspose1d(layer["in"], layer["out"], layer["kernel"], padding=padding)
 
 
 class CustomLRScheduler(optim.lr_scheduler.ReduceLROnPlateau):
