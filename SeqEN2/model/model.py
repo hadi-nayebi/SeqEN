@@ -56,6 +56,7 @@ class Model:
         if not self.path.exists():
             self.path.mkdir()
             self.versions_path.mkdir()
+        self.random_seed = 0
 
     def build_model(self, arch):
         if arch.type == "AE":
@@ -126,7 +127,7 @@ class Model:
         mvid=None,
         ignore_continuity=False,
     ):
-        set_random_seed(0)
+        set_random_seed(self.random_seed)
         if mvid is None:
             timestamp = datetime.now().strftime("%Y%m%d%H%M")
         else:

@@ -116,6 +116,7 @@ def main(args):
         dn=args["Dn"],
         w=args["W"],
     )
+    train_session.model.random_seed = args["Random Seed"]
     # load datafiles
     mvid = None
     training_settings = args["Training Settings"]
