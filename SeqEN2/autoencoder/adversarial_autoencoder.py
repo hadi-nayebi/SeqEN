@@ -6,9 +6,11 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
+from torch import argmax
 from torch import load as torch_load
 from torch import ones, optim, randperm
 from torch import save as torch_save
+from torch import sum as torch_sum
 from torch import transpose, zeros
 
 from SeqEN2.autoencoder.autoencoder import Autoencoder
@@ -147,13 +149,39 @@ class AdversarialAutoencoder(Autoencoder):
             self.train_continuity(one_hot_input)
             self.train_discriminator(one_hot_input, device)
 
+    def test_discriminator(self, one_hot_input, generator_output, device):
+        generator_loss = self.criterion_NLLLoss(
+            generator_output,
+            zeros((generator_output.shape[0],), device=device).long(),
+        )
+        generator_choice = argmax(generator_output, dim=1)
+        generator_acc = 1 - (torch_sum(generator_choice) / generator_choice.shape[0])
+
+        ndx = randperm(self.w)
+        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
+        discriminator_loss = self.criterion_NLLLoss(
+            discriminator_output,
+            ones((discriminator_output.shape[0],), device=device).long(),
+        )
+        # discriminator acc
+        discriminator_choice = argmax(discriminator_output, dim=1)
+        discriminator_acc = torch_sum(discriminator_choice) / discriminator_choice.shape[0]
+        # reconstruction_loss, discriminator_loss, classifier_loss
+        self.log("test_generator_loss", generator_loss.item())
+        self.log("test_generator_accuracy", generator_acc.item())
+        self.log("test_discriminator_loss", discriminator_loss.item())
+        self.log("test_discriminator_accuracy", discriminator_acc.item())
+
     def test_one_batch(self, input_vals, device, input_keys="A--"):
         if input_vals is not None:
             input_ndx, _, _, one_hot_input = self.transform_input(
                 input_vals, device, input_keys=input_keys
             )
-            reconstructor_output, _, encoded_output = self.forward_test(one_hot_input)
+            reconstructor_output, discriminator_output, encoded_output = self.forward_test(
+                one_hot_input
+            )
             self.test_reconstructor(reconstructor_output, input_ndx, device)
+            self.test_discriminator(one_hot_input, discriminator_output, device)
             # test for continuity
             self.test_continuity(encoded_output)
 
