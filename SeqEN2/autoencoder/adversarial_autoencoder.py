@@ -6,17 +6,14 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from torch import argmax
 from torch import load as torch_load
-from torch import no_grad, ones, optim, randperm
+from torch import ones, optim, randperm
 from torch import save as torch_save
-from torch import sum as torch_sum
 from torch import transpose, zeros
 
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AAETrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -69,7 +66,7 @@ class AdversarialAutoencoder(Autoencoder):
         decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
         devectorized = self.devectorizer(decoded)
         discriminator_output = self.discriminator(encoded)
-        return devectorized, discriminator_output
+        return devectorized, discriminator_output, encoded
 
     def save(self, model_dir, epoch):
         super(AdversarialAutoencoder, self).save(model_dir, epoch)
@@ -140,80 +137,26 @@ class AdversarialAutoencoder(Autoencoder):
         self.generator_lr_scheduler.step(gen_disc_loss)
         self.discriminator_lr_scheduler.step(gen_disc_loss)
 
-    def train_one_batch(self, one_hot_input, input_ndx, device=None):
-        self.train_reconstructor(one_hot_input, input_ndx)
-        # train for continuity
-        self.train_continuity(one_hot_input)
-        self.train_discriminator(one_hot_input, device)
+    def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A--"):
+        if input_vals is not None:
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals, device, input_noise=input_noise, input_keys=input_keys
+            )
+            self.train_reconstructor(one_hot_input, input_ndx)
+            # train for continuity
+            self.train_continuity(one_hot_input)
+            self.train_discriminator(one_hot_input, device)
 
-    def train_batch(self, input_vals, device, input_noise=0.0):
-        """
-        Training for one batch of data, this will move into autoencoder module
-        :param input_vals:
-        :param device:
-        :param input_noise:
-        :return:
-        """
+    def test_one_batch(self, input_vals, device, input_keys="A--"):
+        if input_vals is not None:
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals, device, input_keys=input_keys
+            )
+            reconstructor_output, _, encoded_output = self.forward_test(one_hot_input)
+            self.test_reconstructor(reconstructor_output, input_ndx, device)
+            # test for continuity
+            self.test_continuity(encoded_output)
+
+    @staticmethod
+    def assert_input_type(input_vals):
         assert isinstance(input_vals, Dict), "AAE requires a dict as input_vals"
-        self.train()
-        if "cl" in input_vals.keys():
-            if input_vals["cl"] is not None:
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["cl"], device, input_noise=input_noise, input_keys="S--"
-                )
-                self.train_one_batch(one_hot_input, input_ndx, device=device)
-        if "ss" in input_vals.keys():
-            if input_vals["ss"] is not None:
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["ss"], device, input_noise=input_noise, input_keys="S--"
-                )
-                self.train_one_batch(one_hot_input, input_ndx, device=device)
-        if "clss" in input_vals.keys():
-            if input_vals["clss"] is not None:
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["clss"], device, input_noise=input_noise, input_keys="S--"
-                )
-                self.train_one_batch(one_hot_input, input_ndx, device=device)
-
-    def test_reconstructor(self, one_hot_input, input_ndx, device):
-        (reconstructor_output, _) = self.forward_test(one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        # reconstructor acc
-        reconstructor_ndx = argmax(reconstructor_output, dim=1)
-        reconstructor_accuracy = (
-            torch_sum(reconstructor_ndx == input_ndx.reshape((-1,))) / reconstructor_ndx.shape[0]
-        )
-        consensus_seq_acc, _ = consensus_acc(
-            input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-        )
-        # reconstruction_loss, discriminator_loss, classifier_loss
-        self.log("test_reconstructor_loss", reconstructor_loss.item())
-        self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-        self.log("test_consensus_accuracy", consensus_seq_acc)
-
-    def test_batch(self, input_vals, device):
-        """
-        Test a single batch of data, this will move into autoencoder
-        :param input_vals:
-        :return:
-        """
-        self.eval()
-        with no_grad():
-            if "cl" in input_vals.keys():
-                if input_vals["cl"] is not None:
-                    input_ndx, _, _, one_hot_input = self.transform_input(
-                        input_vals["cl"], device, input_keys="S--"
-                    )
-                    self.test_one_batch(one_hot_input, input_ndx, device)
-            if "ss" in input_vals.keys():
-                if input_vals["ss"] is not None:
-                    input_ndx, _, _, one_hot_input = self.transform_input(
-                        input_vals["ss"], device, input_keys="S--"
-                    )
-                    self.test_one_batch(one_hot_input, input_ndx, device)
-            if "clss" in input_vals.keys():
-                if input_vals["clss"] is not None:
-                    input_ndx, _, _, one_hot_input = self.transform_input(
-                        input_vals["clss"], device, input_keys="S--"
-                    )
-                    self.test_one_batch(one_hot_input, input_ndx, device)
