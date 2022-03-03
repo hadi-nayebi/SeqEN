@@ -1,0 +1,108 @@
+{
+        "name": "arch49",
+        "type": "AAE",
+        "vectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 21,
+                                "out": 8
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "encoder": [
+                        {
+                                "type": "Conv1d",
+                                "in": 8,
+                                "out": 32,
+                                "kernel": 5,
+                                "padding": "same"
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Conv1d",
+                                "in": 32,
+                                "out": 32,
+                                "kernel": 5
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Flatten"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 512,
+                                "out": 10
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "decoder": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 512
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Unflatten",
+                                "in": 32,
+                                "out": 16
+                        },
+                        {
+                                "type": "ConvTranspose1d",
+                                "in": 32,
+                                "out": 32,
+                                "kernel": 5
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "ConvTranspose1d",
+                                "in": 32,
+                                "out": 8,
+                                "kernel": 5,
+                                "padding": 2
+                        },
+                        {
+                                "type": "ReLU"
+                        }
+                ],
+        "discriminator": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 2
+                        },
+                        {
+                                "type": "LogSoftmax"
+                        }
+                ],
+        "devectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 8,
+                                "out": 21
+                        },
+                        {
+                                "type": "LogSoftmax"
+                        }
+                ]
+}

@@ -102,7 +102,11 @@ class Autoencoder(Module):
         return devectorized
 
     def forward_test(self, one_hot_input):
-        return self.forward_encoder_decoder(one_hot_input)
+        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
+        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
+        decoded = transpose(self.decoder(encoded), 1, 2).reshape(-1, self.d1)
+        devectorized = self.devectorizer(decoded)
+        return devectorized, encoded
 
     def forward_embed(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -165,8 +169,8 @@ class Autoencoder(Module):
         self.training_settings = training_settings
         self.initialize_training_components()
 
-    def transform_input(self, input_vals, device, input_noise=0.0, input_keys="S--"):
-        # input_keys = "S--" : sequence, "SC-" sequence:class, "SS-" sequence:ss, "SCS" seq:class:ss, "
+    def transform_input(self, input_vals, device, input_noise=0.0, input_keys="A--"):
+        # input_keys = "A--" : sequence, "AC-" sequence:class, "AS-" sequence:ss, "ACS" seq:class:ss, "
         # scans by sliding window of w
         assert isinstance(input_vals, Tensor), f"expected Tensor type, received {type(input_vals)}"
         kernel_size = (input_vals.shape[1], self.w)
@@ -233,10 +237,14 @@ class Autoencoder(Module):
             self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
             self.continuity_lr_scheduler.step(continuity_loss.item())
 
-    def train_one_batch(self, one_hot_input, input_ndx, device=None):
-        self.train_reconstructor(one_hot_input, input_ndx)
-        # train for continuity
-        self.train_continuity(one_hot_input)
+    def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A--"):
+        if input_vals is not None:
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals, device, input_noise=input_noise, input_keys=input_keys
+            )
+            self.train_reconstructor(one_hot_input, input_ndx)
+            # train for continuity
+            self.train_continuity(one_hot_input)
 
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
@@ -246,29 +254,22 @@ class Autoencoder(Module):
         :param input_noise:
         :return:
         """
-        assert isinstance(input_vals, Dict), "AE requires a dict as input_vals"
+        self.assert_input_type(input_vals)
         self.train()
         if "cl" in input_vals.keys():
-            if input_vals["cl"] is not None:
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["cl"], device, input_noise=input_noise, input_keys="S--"
-                )
-                self.train_one_batch(one_hot_input, input_ndx)
+            self.train_one_batch(
+                input_vals["cl"], input_noise=input_noise, device=device, input_keys="A--"
+            )
         if "ss" in input_vals.keys():
-            if input_vals["ss"] is not None:
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["ss"], device, input_noise=input_noise, input_keys="S--"
-                )
-                self.train_one_batch(one_hot_input, input_ndx)
+            self.train_one_batch(
+                input_vals["ss"], input_noise=input_noise, device=device, input_keys="A--"
+            )
         if "clss" in input_vals.keys():
-            if input_vals["clss"] is not None:
-                input_ndx, _, _, one_hot_input = self.transform_input(
-                    input_vals["clss"], device, input_noise=input_noise, input_keys="S--"
-                )
-                self.train_one_batch(one_hot_input, input_ndx)
+            self.train_one_batch(
+                input_vals["clss"], input_noise=input_noise, device=device, input_keys="A--"
+            )
 
-    def test_reconstructor(self, one_hot_input, input_ndx, device):
-        reconstructor_output = self.forward_test(one_hot_input)
+    def test_reconstructor(self, reconstructor_output, input_ndx, device):
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
         # reconstructor acc
         reconstructor_ndx = argmax(reconstructor_output, dim=1)
@@ -283,9 +284,8 @@ class Autoencoder(Module):
         self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
         self.log("test_consensus_accuracy", consensus_seq_acc)
 
-    def test_continuity(self, one_hot_input):
+    def test_continuity(self, encoded_output):
         if not self.ignore_continuity:
-            encoded_output = self.forward_embed(one_hot_input)
             continuity_loss_r = self.criterion_MSELoss(
                 encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
             )
@@ -295,10 +295,15 @@ class Autoencoder(Module):
             continuity_loss = continuity_loss_r + continuity_loss_l
             self.log("test_continuity_loss", continuity_loss.item())
 
-    def test_one_batch(self, one_hot_input, input_ndx, device):
-        self.test_reconstructor(one_hot_input, input_ndx, device)
-        # test for continuity
-        self.test_continuity(one_hot_input)
+    def test_one_batch(self, input_vals, device, input_keys="A--"):
+        if input_vals is not None:
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals, device, input_keys=input_keys
+            )
+            reconstructor_output, encoded_output = self.forward_test(one_hot_input)
+            self.test_reconstructor(reconstructor_output, input_ndx, device)
+            # test for continuity
+            self.test_continuity(encoded_output)
 
     def test_batch(self, input_vals, device):
         """
@@ -306,23 +311,16 @@ class Autoencoder(Module):
         :param input_vals:
         :return:
         """
+        self.assert_input_type(input_vals)
         self.eval()
         with no_grad():
             if "cl" in input_vals.keys():
-                if input_vals["cl"] is not None:
-                    input_ndx, _, _, one_hot_input = self.transform_input(
-                        input_vals["cl"], device, input_keys="S--"
-                    )
-                    self.test_one_batch(one_hot_input, input_ndx, device)
+                self.test_one_batch(input_vals["cl"], device, input_keys="A--")
             if "ss" in input_vals.keys():
-                if input_vals["ss"] is not None:
-                    input_ndx, _, _, one_hot_input = self.transform_input(
-                        input_vals["ss"], device, input_keys="S--"
-                    )
-                    self.test_one_batch(one_hot_input, input_ndx, device)
+                self.test_one_batch(input_vals["ss"], device, input_keys="A--")
             if "clss" in input_vals.keys():
-                if input_vals["clss"] is not None:
-                    input_ndx, _, _, one_hot_input = self.transform_input(
-                        input_vals["clss"], device, input_keys="S--"
-                    )
-                    self.test_one_batch(one_hot_input, input_ndx, device)
+                self.test_one_batch(input_vals["clss"], device, input_keys="A--")
+
+    @staticmethod
+    def assert_input_type(input_vals):
+        assert isinstance(input_vals, Dict), "AE requires a dict as input_vals"
