@@ -27,9 +27,6 @@ class AutoencoderClassifier(Autoencoder):
         self.classifier = LayerMaker().make(self.arch.classifier)
         # training components
         self._training_settings = AECTrainingSettings()
-        # define customized optimizers
-        self.generator_optimizer = None
-        self.generator_lr_scheduler = None
         ###
         self.classifier_optimizer = None
         self.classifier_lr_scheduler = None
