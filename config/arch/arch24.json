@@ -1,0 +1,110 @@
+{
+        "name": "arch27",
+        "type": "AE",
+        "vectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 21,
+                                "out": 8,
+                                "init": "xavier"
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "encoder":[
+                        {
+                                "type": "Flatten"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 160,
+                                "out": 1024,
+                                "init": "xavier"
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024,
+                                "init": "xavier"
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024,
+                                "init": "xavier"
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 10,
+                                "init": "xavier"
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "decoder": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 1024,
+                                "init": "he"
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024,
+                                "init": "he"
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024,
+                                "init": "he"
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 160,
+                                "init": "he"
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Unflatten",
+                                "in": 8,
+                                "out": 20,
+                        }
+                ],
+        "devectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 8,
+                                "out": 21,
+                                "init": "xavier"
+                        },
+                        {
+                                "type": "LogSoftmax"
+                        }
+                ]
+}
