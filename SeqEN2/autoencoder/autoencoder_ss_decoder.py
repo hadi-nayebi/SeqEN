@@ -22,6 +22,8 @@ from SeqEN2.utils.utils import get_map_location
 
 # class for AAE
 class AutoencoderSSDecoder(Autoencoder):
+    ds = 9  # SS labels dimension
+
     def __init__(self, d1, dn, w, arch):
         super(AutoencoderSSDecoder, self).__init__(d1, dn, w, arch)
         assert self.arch.ss_decoder is not None, "arch missing ss_decoder."
