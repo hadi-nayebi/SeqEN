@@ -7,6 +7,7 @@ __version__ = "0.0.1"
 
 from torch import optim
 from torch.nn import (
+    ELU,
     Conv1d,
     ConvTranspose1d,
     Flatten,
@@ -83,6 +84,8 @@ class LayerMaker(object):
             return Sigmoid()
         elif layer["type"] == "ReLU":
             return ReLU()
+        elif layer["type"] == "ELU":
+            return ELU()
         elif layer["type"] == "Conv1d":
             bias = layer.get("bias", True)
             padding = layer.get("padding", 0)
