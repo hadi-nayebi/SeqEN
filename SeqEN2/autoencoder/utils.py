@@ -21,6 +21,7 @@ from torch.nn import (
     Tanh,
     Unflatten,
 )
+from torch.nn.init import kaiming_normal_, xavier_normal_
 
 
 class Architecture(object):
@@ -77,7 +78,13 @@ class LayerMaker(object):
     def make_layer(layer):
         if layer["type"] == "Linear":
             bias = layer.get("bias", True)
-            return Linear(layer["in"], layer["out"], bias=bias)
+            new_layer = Linear(layer["in"], layer["out"], bias=bias)
+            if "init" in layer.keys():
+                if layer["init"] == "xavier":
+                    xavier_normal_(new_layer.weight)
+                elif layer["init"] == "he":
+                    kaiming_normal_(new_layer.weight)
+            return new_layer
         elif layer["type"] == "Tanh":
             return Tanh()
         elif layer["type"] == "Sigmoid":
@@ -89,7 +96,15 @@ class LayerMaker(object):
         elif layer["type"] == "Conv1d":
             bias = layer.get("bias", True)
             padding = layer.get("padding", 0)
-            return Conv1d(layer["in"], layer["out"], layer["kernel"], padding=padding, bias=bias)
+            new_layer = Conv1d(
+                layer["in"], layer["out"], layer["kernel"], padding=padding, bias=bias
+            )
+            if "init" in layer.keys():
+                if layer["init"] == "xavier":
+                    xavier_normal_(new_layer.weight)
+                elif layer["init"] == "he":
+                    kaiming_normal_(new_layer.weight)
+            return new_layer
         elif layer["type"] == "LogSoftmax":
             return LogSoftmax(dim=1)
         elif layer["type"] == "Softmax":
@@ -102,7 +117,13 @@ class LayerMaker(object):
             return Unflatten(1, (layer["in"], layer["out"]))
         elif layer["type"] == "ConvTranspose1d":
             padding = layer.get("padding", 0)
-            return ConvTranspose1d(layer["in"], layer["out"], layer["kernel"], padding=padding)
+            new_layer = ConvTranspose1d(layer["in"], layer["out"], layer["kernel"], padding=padding)
+            if "init" in layer.keys():
+                if layer["init"] == "xavier":
+                    xavier_normal_(new_layer.weight)
+                elif layer["init"] == "he":
+                    kaiming_normal_(new_layer.weight)
+            return new_layer
 
 
 class CustomLRScheduler(optim.lr_scheduler.ReduceLROnPlateau):
