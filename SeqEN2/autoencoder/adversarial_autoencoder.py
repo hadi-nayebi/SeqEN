@@ -12,6 +12,7 @@ from torch import ones, optim, randperm
 from torch import save as torch_save
 from torch import sum as torch_sum
 from torch import transpose, zeros
+from torch.nn.utils import clip_grad_value_
 
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
@@ -109,6 +110,16 @@ class AdversarialAutoencoder(Autoencoder):
             min_lr=self._training_settings.discriminator.min_lr,
         )
 
+    def clip_generator_gradients(self):
+        # gradient clipping:
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
+        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
+        clip_grad_value_(self.discriminator.parameters(), clip_value=1.0)
+
+    def clip_discriminator_gradients(self):
+        # gradient clipping:
+        clip_grad_value_(self.discriminator.parameters(), clip_value=1.0)
+
     def train_discriminator(self, one_hot_input, device):
         # train generator
         self.generator_optimizer.zero_grad()
@@ -118,6 +129,7 @@ class AdversarialAutoencoder(Autoencoder):
             zeros((generator_output.shape[0],), device=device).long(),
         )
         generator_loss.backward()
+        self.clip_generator_gradients()
         self.generator_optimizer.step()
         self.log("generator_loss", generator_loss.item())
         self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
@@ -131,6 +143,7 @@ class AdversarialAutoencoder(Autoencoder):
             ones((discriminator_output.shape[0],), device=device).long(),
         )
         discriminator_loss.backward()
+        self.clip_discriminator_gradients()
         self.discriminator_optimizer.step()
         self.log("discriminator_loss", discriminator_loss.item())
         self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())

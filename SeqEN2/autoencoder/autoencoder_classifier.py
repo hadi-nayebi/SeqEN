@@ -12,6 +12,7 @@ from torch import mul, no_grad, optim
 from torch import save as torch_save
 from torch import sum as torch_sum
 from torch import transpose
+from torch.nn.utils import clip_grad_value_
 
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
@@ -92,12 +93,19 @@ class AutoencoderClassifier(Autoencoder):
             min_lr=self._training_settings.classifier.min_lr,
         )
 
+    def clip_classifier_gradients(self):
+        # gradient clipping:
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
+        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
+        clip_grad_value_(self.classifier.parameters(), clip_value=1.0)
+
     def train_classifier(self, one_hot_input, target_vals_cl):
         # train classifier
         self.classifier_optimizer.zero_grad()
         classifier_output = self.forward_classifier(one_hot_input)
         classifier_loss = self.criterion_MSELoss(classifier_output, target_vals_cl)
         classifier_loss.backward()
+        self.clip_classifier_gradients()
         self.classifier_optimizer.step()
         self.log("classifier_loss", classifier_loss.item())
         self.log("classifier_LR", self.classifier_lr_scheduler.get_last_lr())

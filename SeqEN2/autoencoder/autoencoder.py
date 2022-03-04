@@ -15,6 +15,7 @@ from torch import sum as torch_sum
 from torch import tensor, transpose
 from torch.nn import Module, MSELoss, NLLLoss
 from torch.nn.functional import one_hot, unfold
+from torch.nn.utils import clip_grad_value_
 
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.model.data_loader import read_json, write_json
@@ -207,12 +208,25 @@ class Autoencoder(Module):
     def reset_log(self):
         self.logs = {}
 
+    def clip_reconstructor_gradients(self):
+        # gradient clipping:
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
+        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
+        clip_grad_value_(self.decoder.parameters(), clip_value=1.0)
+        clip_grad_value_(self.devectorizer.parameters(), clip_value=1.0)
+
+    def clip_continuity_gradients(self):
+        # gradient clipping:
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
+        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
+
     def train_reconstructor(self, one_hot_input, input_ndx):
         # train encoder_decoder
         self.reconstructor_optimizer.zero_grad()
         reconstructor_output = self.forward_encoder_decoder(one_hot_input)
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
         reconstructor_loss.backward()
+        self.clip_reconstructor_gradients()
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss", reconstructor_loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
@@ -231,6 +245,7 @@ class Autoencoder(Module):
             )
             continuity_loss = continuity_loss_r + continuity_loss_l
             continuity_loss.backward()
+            self.clip_continuity_gradients()
             self.continuity_optimizer.step()
             self.log("continuity_loss", continuity_loss.item())
             self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
