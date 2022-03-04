@@ -95,9 +95,9 @@ class AutoencoderClassifier(Autoencoder):
 
     def clip_classifier_gradients(self):
         # gradient clipping:
-        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
-        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
-        clip_grad_value_(self.classifier.parameters(), clip_value=1.0)
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.encoder.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.classifier.parameters(), clip_value=self.g_clip)
 
     def train_classifier(self, one_hot_input, target_vals_cl):
         # train classifier

@@ -112,13 +112,13 @@ class AdversarialAutoencoder(Autoencoder):
 
     def clip_generator_gradients(self):
         # gradient clipping:
-        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
-        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
-        clip_grad_value_(self.discriminator.parameters(), clip_value=1.0)
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.encoder.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.discriminator.parameters(), clip_value=self.g_clip)
 
     def clip_discriminator_gradients(self):
         # gradient clipping:
-        clip_grad_value_(self.discriminator.parameters(), clip_value=1.0)
+        clip_grad_value_(self.discriminator.parameters(), clip_value=self.g_clip)
 
     def train_discriminator(self, one_hot_input, device):
         # train generator

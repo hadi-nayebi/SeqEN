@@ -28,6 +28,7 @@ from SeqEN2.utils.utils import get_map_location
 class Autoencoder(Module):
     aa_keys = "WYFMILVAGPSTCEDQNHRK*"  # amino acids class labels
     d0 = 21  # amino acids class size
+    g_clip = 0.1
 
     def __init__(self, d1, dn, w, arch):
         super(Autoencoder, self).__init__()
@@ -210,15 +211,15 @@ class Autoencoder(Module):
 
     def clip_reconstructor_gradients(self):
         # gradient clipping:
-        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
-        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
-        clip_grad_value_(self.decoder.parameters(), clip_value=1.0)
-        clip_grad_value_(self.devectorizer.parameters(), clip_value=1.0)
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.encoder.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.decoder.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.devectorizer.parameters(), clip_value=self.g_clip)
 
     def clip_continuity_gradients(self):
         # gradient clipping:
-        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
-        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.encoder.parameters(), clip_value=self.g_clip)
 
     def train_reconstructor(self, one_hot_input, input_ndx):
         # train encoder_decoder

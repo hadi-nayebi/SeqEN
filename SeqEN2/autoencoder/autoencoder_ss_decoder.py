@@ -98,9 +98,9 @@ class AutoencoderSSDecoder(Autoencoder):
 
     def clip_classifier_gradients(self):
         # gradient clipping:
-        clip_grad_value_(self.vectorizer.parameters(), clip_value=1.0)
-        clip_grad_value_(self.encoder.parameters(), clip_value=1.0)
-        clip_grad_value_(self.ss_decoder.parameters(), clip_value=1.0)
+        clip_grad_value_(self.vectorizer.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.encoder.parameters(), clip_value=self.g_clip)
+        clip_grad_value_(self.ss_decoder.parameters(), clip_value=self.g_clip)
 
     def train_ss_decoder(self, one_hot_input, target_vals_ss):
         # train encoder_SS_decoder
