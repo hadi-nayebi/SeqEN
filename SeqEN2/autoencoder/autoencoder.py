@@ -137,7 +137,7 @@ class Autoencoder(Module):
 
     def initialize_training_components(self):
         # define customized optimizers
-        self.reconstructor_optimizer = optim.SGD(
+        self.reconstructor_optimizer = optim.Adam(
             [
                 {"params": self.vectorizer.parameters()},
                 {"params": self.encoder.parameters()},
@@ -153,7 +153,7 @@ class Autoencoder(Module):
             min_lr=self._training_settings.reconstructor.min_lr,
         )
         # define customized optimizers
-        self.continuity_optimizer = optim.SGD(
+        self.continuity_optimizer = optim.Adam(
             [
                 {"params": self.vectorizer.parameters()},
                 {"params": self.encoder.parameters()},
