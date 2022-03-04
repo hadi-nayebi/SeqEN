@@ -97,3 +97,21 @@ class AAECSSTrainingSettings(NoneRefersDefault):
     discriminator: TrainingParams = DefaultVal(TrainingParams()).val
     classifier: TrainingParams = DefaultVal(TrainingParams()).val
     ss_decoder: TrainingParams = DefaultVal(TrainingParams()).val
+
+
+@dataclass_json(undefined=Undefined.RAISE)
+@nested_deco
+class AAESSTrainingSettings(NoneRefersDefault):
+    reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    continuity: TrainingParams = DefaultVal(TrainingParams()).val
+    generator: TrainingParams = DefaultVal(TrainingParams()).val
+    discriminator: TrainingParams = DefaultVal(TrainingParams()).val
+    ss_decoder: TrainingParams = DefaultVal(TrainingParams()).val
+
+
+@dataclass_json(undefined=Undefined.RAISE)
+@nested_deco
+class AECTrainingSettings(NoneRefersDefault):
+    reconstructor: TrainingParams = DefaultVal(TrainingParams()).val
+    continuity: TrainingParams = DefaultVal(TrainingParams()).val
+    classifier: TrainingParams = DefaultVal(TrainingParams()).val

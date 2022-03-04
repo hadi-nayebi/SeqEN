@@ -23,6 +23,7 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier_ss_decoder import (
     AdversarialAutoencoderClassifierSSDecoder,
 )
 from SeqEN2.autoencoder.autoencoder import Autoencoder
+from SeqEN2.autoencoder.autoencoder_classifier import AutoencoderClassifier
 from SeqEN2.model.data_loader import DataLoader
 from SeqEN2.utils.seq_tools import sliding_window
 from SeqEN2.utils.utils import set_random_seed
@@ -63,6 +64,8 @@ class Model:
             self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAE":
             self.autoencoder = AdversarialAutoencoder(self.d1, self.dn, self.w, arch)
+        elif arch.type == "AEC":
+            self.autoencoder = AutoencoderClassifier(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAEC":
             self.autoencoder = AdversarialAutoencoderClassifier(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAECSS":
