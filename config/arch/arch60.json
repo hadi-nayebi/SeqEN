@@ -1,0 +1,141 @@
+{
+        "name": "arch60",
+        "type": "AESS",
+        "vectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 21,
+                                "out": 8
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "encoder":[
+                        {
+                                "type": "Flatten"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 160,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 10
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "decoder": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 160
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Unflatten",
+                                "in": 8,
+                                "out": 20
+                        }
+                ],
+        "ss_decoder": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 256
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 256,
+                                "out": 256
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Unflatten",
+                                "in": 32,
+                                "out": 8
+                        },
+                        {
+                                "type": "ConvTranspose1d",
+                                "in": 32,
+                                "out": 64,
+                                "kernel": 6
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "ConvTranspose1d",
+                                "in": 64,
+                                "out": 9,
+                                "kernel": 8
+                        },
+                        {
+                                "type": "LogSoftmax"
+                        }
+                ],
+        "devectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 8,
+                                "out": 21
+                        },
+                        {
+                                "type": "LogSoftmax"
+                        }
+                ]
+}
