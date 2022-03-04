@@ -1,0 +1,118 @@
+{
+        "name": "arch54",
+        "type": "AEC",
+        "vectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 21,
+                                "out": 8
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "encoder":[
+                        {
+                                "type": "Flatten"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 160,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "Tanh"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 10
+                        },
+                        {
+                                "type": "Tanh"
+                        }
+                ],
+        "decoder": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 160
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Unflatten",
+                                "in": 8,
+                                "out": 20
+                        }
+                ],
+        "classifier": [
+                        {
+                                "type": "Linear",
+                                "in": 10,
+                                "out": 1024
+                        },
+                        {
+                                "type": "ReLU"
+                        },
+                        {
+                                "type": "Linear",
+                                "in": 1024,
+                                "out": 2
+                        },
+                        {
+                                "type": "Softmax"
+                        }
+                ],
+        "devectorizer": [
+                        {
+                                "type": "Linear",
+                                "in": 8,
+                                "out": 21
+                        },
+                        {
+                                "type": "LogSoftmax"
+                        }
+                ]
+}
