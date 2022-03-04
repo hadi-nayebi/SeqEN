@@ -93,7 +93,7 @@
                         {
                                 "type": "Unflatten",
                                 "in": 8,
-                                "out": 20,
+                                "out": 20
                         }
                 ],
         "devectorizer": [
