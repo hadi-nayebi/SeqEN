@@ -5,7 +5,8 @@
                         {
                                 "type": "Linear",
                                 "in": 21,
-                                "out": 8
+                                "out": 8,
+                                "init": "xavier"
                         },
                         {
                                 "type": "Tanh"
@@ -17,7 +18,8 @@
                                 "in": 8,
                                 "out": 64,
                                 "kernel": 5,
-                                "padding": "same"
+                                "padding": "same",
+                                "init": "xavier"
                         },
                         {
                                 "type": "Tanh"
@@ -27,7 +29,8 @@
                                 "in": 64,
                                 "out": 64,
                                 "kernel": 5,
-                                "padding": "same"
+                                "padding": "same",
+                                "init": "xavier"
                         },
                         {
                                 "type": "Tanh"
@@ -36,7 +39,8 @@
                                 "type": "Conv1d",
                                 "in": 64,
                                 "out": 64,
-                                "kernel": 5
+                                "kernel": 5,
+                                "init": "xavier"
                         },
                         {
                                 "type": "Tanh"
@@ -47,7 +51,8 @@
                         {
                                 "type": "Linear",
                                 "in": 1024,
-                                "out": 10
+                                "out": 10,
+                                "init": "xavier"
                         },
                         {
                                 "type": "Tanh"
@@ -57,7 +62,8 @@
                         {
                                 "type": "Linear",
                                 "in": 10,
-                                "out": 1024
+                                "out": 1024,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -71,7 +77,8 @@
                                 "type": "ConvTranspose1d",
                                 "in": 64,
                                 "out": 64,
-                                "kernel": 5
+                                "kernel": 5,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -81,7 +88,8 @@
                                 "in": 64,
                                 "out": 64,
                                 "kernel": 5,
-                                "padding": 2
+                                "padding": 2,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -91,7 +99,8 @@
                                 "in": 64,
                                 "out": 8,
                                 "kernel": 5,
-                                "padding": 2
+                                "padding": 2,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -101,7 +110,8 @@
                         {
                                 "type": "Linear",
                                 "in": 10,
-                                "out": 256
+                                "out": 256,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -109,7 +119,8 @@
                         {
                                 "type": "Linear",
                                 "in": 256,
-                                "out": 256
+                                "out": 256,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -123,7 +134,8 @@
                                 "type": "ConvTranspose1d",
                                 "in": 32,
                                 "out": 64,
-                                "kernel": 6
+                                "kernel": 6,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -132,7 +144,8 @@
                                 "type": "ConvTranspose1d",
                                 "in": 64,
                                 "out": 9,
-                                "kernel": 8
+                                "kernel": 8,
+                                "init": "xavier"
                         },
                         {
                                 "type": "LogSoftmax"
@@ -142,7 +155,8 @@
                         {
                                 "type": "Linear",
                                 "in": 10,
-                                "out": 1024
+                                "out": 1024,
+                                "init": "he"
                         },
                         {
                                 "type": "ReLU"
@@ -150,7 +164,8 @@
                         {
                                 "type": "Linear",
                                 "in": 1024,
-                                "out": 2
+                                "out": 2,
+                                "init": "xavier"
                         },
                         {
                                 "type": "Softmax"
@@ -160,7 +175,8 @@
                         {
                                 "type": "Linear",
                                 "in": 8,
-                                "out": 21
+                                "out": 21,
+                                "init": "xavier"
                         },
                         {
                                 "type": "LogSoftmax"
