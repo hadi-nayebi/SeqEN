@@ -24,6 +24,9 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier_ss_decoder import (
 )
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.autoencoder_classifier import AutoencoderClassifier
+from SeqEN2.autoencoder.autoencoder_classifier_ss_decoder import (
+    AutoencoderClassifierSSDecoder,
+)
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
 from SeqEN2.model.data_loader import DataLoader
 from SeqEN2.utils.seq_tools import sliding_window
@@ -69,6 +72,8 @@ class Model:
             self.autoencoder = AutoencoderClassifier(self.d1, self.dn, self.w, arch)
         elif arch.type == "AESS":
             self.autoencoder = AutoencoderSSDecoder(self.d1, self.dn, self.w, arch)
+        elif arch.type == "AECSS":
+            self.autoencoder = AutoencoderClassifierSSDecoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAEC":
             self.autoencoder = AdversarialAutoencoderClassifier(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAECSS":
