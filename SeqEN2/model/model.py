@@ -231,7 +231,7 @@ class Model:
                     self.test()
                 if (iter_for_log + 1) % log_every == 0:
                     self.log_it(iter_for_log, epoch)
-            if epoch % save_model_interval == 0:
+            if (epoch + 1) % save_model_interval == 0:
                 self.store_model(model, train_dir, epoch)
             self.autoencoder.update_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
