@@ -28,7 +28,7 @@ from SeqEN2.utils.utils import get_map_location
 class Autoencoder(Module):
     aa_keys = "WYFMILVAGPSTCEDQNHRK*"  # amino acids class labels
     d0 = 21  # amino acids class size
-    g_clip = 0.1
+    g_clip = 1.0
 
     def __init__(self, d1, dn, w, arch):
         super(Autoencoder, self).__init__()
@@ -137,35 +137,35 @@ class Autoencoder(Module):
 
     def initialize_training_components(self):
         # define customized optimizers
-        self.reconstructor_optimizer = optim.Adadelta(
+        self.reconstructor_optimizer = optim.SGD(
             [
                 {"params": self.vectorizer.parameters()},
                 {"params": self.encoder.parameters()},
                 {"params": self.decoder.parameters()},
                 {"params": self.devectorizer.parameters()},
             ],
-            # lr=self._training_settings.reconstructor.lr,
+            lr=self._training_settings.reconstructor.lr,
         )
-        # self.reconstructor_lr_scheduler = CustomLRScheduler(
-        #     self.reconstructor_optimizer,
-        #     factor=self._training_settings.reconstructor.factor,
-        #     patience=self._training_settings.reconstructor.patience,
-        #     min_lr=self._training_settings.reconstructor.min_lr,
-        # )
+        self.reconstructor_lr_scheduler = CustomLRScheduler(
+            self.reconstructor_optimizer,
+            factor=self._training_settings.reconstructor.factor,
+            patience=self._training_settings.reconstructor.patience,
+            min_lr=self._training_settings.reconstructor.min_lr,
+        )
         # define customized optimizers
-        self.continuity_optimizer = optim.Adadelta(
+        self.continuity_optimizer = optim.SGD(
             [
                 {"params": self.vectorizer.parameters()},
                 {"params": self.encoder.parameters()},
             ],
-            # lr=self._training_settings.continuity.lr,
+            lr=self._training_settings.continuity.lr,
         )
-        # self.continuity_lr_scheduler = CustomLRScheduler(
-        #     self.continuity_optimizer,
-        #     factor=self._training_settings.continuity.factor,
-        #     patience=self._training_settings.continuity.patience,
-        #     min_lr=self._training_settings.continuity.min_lr,
-        # )
+        self.continuity_lr_scheduler = CustomLRScheduler(
+            self.continuity_optimizer,
+            factor=self._training_settings.continuity.factor,
+            patience=self._training_settings.continuity.patience,
+            min_lr=self._training_settings.continuity.min_lr,
+        )
 
     def initialize_for_training(self, training_settings=None):
         self.training_settings = training_settings
@@ -230,9 +230,9 @@ class Autoencoder(Module):
         self.clip_reconstructor_gradients()
         self.reconstructor_optimizer.step()
         self.log("reconstructor_loss", reconstructor_loss.item())
-        # self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        # self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        # self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
+        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
+        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
+        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
 
     def train_continuity(self, one_hot_input):
         if not self.ignore_continuity:
@@ -249,9 +249,9 @@ class Autoencoder(Module):
             self.clip_continuity_gradients()
             self.continuity_optimizer.step()
             self.log("continuity_loss", continuity_loss.item())
-            # self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
-            # self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-            # self.continuity_lr_scheduler.step(continuity_loss.item())
+            self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
+            self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
+            self.continuity_lr_scheduler.step(continuity_loss.item())
 
     def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A--"):
         if input_vals is not None:
