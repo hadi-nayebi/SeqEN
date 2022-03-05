@@ -137,6 +137,7 @@ class Model:
         input_noise=0.0,
         mvid=None,
         ignore_continuity=False,
+        branch="",
     ):
         set_random_seed(self.random_seed)
         if mvid is None:
@@ -145,7 +146,7 @@ class Model:
             timestamp = mvid[0]
         model_type = self.autoencoder.arch.type
         arch_name = self.autoencoder.arch.name
-        run_title = f"{timestamp}_{model_type}_{arch_name}"
+        run_title = f"{timestamp}_{model_type}_{arch_name}{branch}"
         train_dir = self.versions_path / f"{run_title}"
         if not train_dir.exists():
             train_dir.mkdir()
@@ -153,7 +154,7 @@ class Model:
         else:
             start_epoch = int(mvid[1]) + 1
         # connect to wandb
-        run_title = f"{timestamp}_{model_type}_{arch_name}_{start_epoch}"
+        run_title = f"{timestamp}_{model_type}_{arch_name}_{start_epoch}{branch}"
         wandb.init(project=self.name, name=run_title)
         self.config = wandb.config
         self.config.batch_size = batch_size
@@ -203,6 +204,7 @@ class Model:
         mvid=None,
         ignore_continuity=False,
         save_model_interval=1,
+        branch="",
     ):
         self.autoencoder.ignore_continuity = ignore_continuity
         train_dir, start_epoch = self.initialize_training(
@@ -211,6 +213,7 @@ class Model:
             input_noise=input_noise,
             mvid=mvid,
             ignore_continuity=ignore_continuity,
+            branch=branch,
         )
         model = wandb.Artifact(f"{self.name}_model", type="model")
         # start training loop
