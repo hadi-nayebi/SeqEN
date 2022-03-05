@@ -112,7 +112,7 @@ class AutoencoderClassifier(Autoencoder):
         self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
         self.classifier_lr_scheduler.step(classifier_loss.item())
 
-    def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A--"):
+    def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A-C"):
         if input_vals is not None:
             input_ndx, _, target_vals_cl, one_hot_input = self.transform_input(
                 input_vals, device, input_noise=input_noise, input_keys=input_keys
@@ -139,11 +139,11 @@ class AutoencoderClassifier(Autoencoder):
         self.train()
         if "cl" in input_vals.keys():
             self.train_one_batch(
-                input_vals["cl"], input_noise=input_noise, device=device, input_keys="AC-"
+                input_vals["cl"], input_noise=input_noise, device=device, input_keys="AC"
             )
         if "ss" in input_vals.keys():
             self.train_one_batch(
-                input_vals["ss"], input_noise=input_noise, device=device, input_keys="A--"
+                input_vals["ss"], input_noise=input_noise, device=device, input_keys="A-"
             )
         if "clss" in input_vals.keys():
             self.train_one_batch(
@@ -164,7 +164,7 @@ class AutoencoderClassifier(Autoencoder):
         self.log("test_classifier_acc_n", classifier_acc_n.item())
         self.log("test_classifier_loss", classifier_loss.item())
 
-    def test_one_batch(self, input_vals, device, input_keys="A--"):
+    def test_one_batch(self, input_vals, device, input_keys="A-C"):
         if input_vals is not None:
             input_ndx, _, target_vals_cl, one_hot_input = self.transform_input(
                 input_vals, device, input_keys=input_keys
@@ -188,8 +188,8 @@ class AutoencoderClassifier(Autoencoder):
         self.eval()
         with no_grad():
             if "cl" in input_vals.keys():
-                self.test_one_batch(input_vals["cl"], device, input_keys="AC-")
+                self.test_one_batch(input_vals["cl"], device, input_keys="AC")
             if "ss" in input_vals.keys():
-                self.test_one_batch(input_vals["ss"], device, input_keys="A--")
+                self.test_one_batch(input_vals["ss"], device, input_keys="A-")
             if "clss" in input_vals.keys():
                 self.test_one_batch(input_vals["clss"], device, input_keys="A-C")

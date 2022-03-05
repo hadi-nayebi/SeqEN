@@ -180,16 +180,23 @@ class Autoencoder(Module):
         input_ndx = input_vals[:, : self.w].long()
         target_vals_ss = None
         target_vals_cl = None
-        if input_keys[1] == "S":
-            target_vals_ss = input_vals[:, self.w : -self.w].long()
-        elif input_keys[2] == "S":
-            target_vals_ss = input_vals[:, -self.w :].long()
-        if input_keys[1] == "C":
-            target_vals_cl = input_vals[:, self.w : -self.w].mean(axis=1).reshape((-1, 1))
-            target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
-        elif input_keys[2] == "C":
-            target_vals_cl = input_vals[:, -self.w :].mean(axis=1).reshape((-1, 1))
-            target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
+        if len(input_keys) == 2:
+            if input_keys[1] == "S":
+                target_vals_ss = input_vals[:, self.w :].long()
+            elif input_keys[1] == "C":
+                target_vals_cl = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
+                target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
+        elif len(input_keys) == 3:
+            if input_keys[1] == "S":
+                target_vals_ss = input_vals[:, self.w : -self.w].long()
+            elif input_keys[2] == "S":
+                target_vals_ss = input_vals[:, -self.w :].long()
+            if input_keys[1] == "C":
+                target_vals_cl = input_vals[:, self.w : -self.w].mean(axis=1).reshape((-1, 1))
+                target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
+            elif input_keys[2] == "C":
+                target_vals_cl = input_vals[:, -self.w :].mean(axis=1).reshape((-1, 1))
+                target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
         # one-hot vec input
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
@@ -274,11 +281,11 @@ class Autoencoder(Module):
         self.train()
         if "cl" in input_vals.keys():
             self.train_one_batch(
-                input_vals["cl"], input_noise=input_noise, device=device, input_keys="A--"
+                input_vals["cl"], input_noise=input_noise, device=device, input_keys="A-"
             )
         if "ss" in input_vals.keys():
             self.train_one_batch(
-                input_vals["ss"], input_noise=input_noise, device=device, input_keys="A--"
+                input_vals["ss"], input_noise=input_noise, device=device, input_keys="A-"
             )
         if "clss" in input_vals.keys():
             self.train_one_batch(
@@ -331,9 +338,9 @@ class Autoencoder(Module):
         self.eval()
         with no_grad():
             if "cl" in input_vals.keys():
-                self.test_one_batch(input_vals["cl"], device, input_keys="A--")
+                self.test_one_batch(input_vals["cl"], device, input_keys="A-")
             if "ss" in input_vals.keys():
-                self.test_one_batch(input_vals["ss"], device, input_keys="A--")
+                self.test_one_batch(input_vals["ss"], device, input_keys="A-")
             if "clss" in input_vals.keys():
                 self.test_one_batch(input_vals["clss"], device, input_keys="A--")
 
