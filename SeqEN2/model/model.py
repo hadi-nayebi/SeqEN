@@ -257,8 +257,10 @@ class Model:
         #         self.autoencoder.train_batch(overfit_batch, self.device, input_noise=input_noise)
         #         self.autoencoder.test_batch(overfit_batch, self.device)
 
-    def load_model(self, version, model_id):
-        model_dir = self.root / "models" / self.name / "versions" / version
+    def load_model(self, version, model_id, name=None):
+        if name is None:
+            name = self.name
+        model_dir = self.root / "models" / name / "versions" / version
         self.autoencoder.load(model_dir, model_id)
 
     def get_embedding(self, num_test_items=-1, test_items=None, dataset="cl"):

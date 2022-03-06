@@ -129,10 +129,16 @@ def main(args):
     if args["Dataset_clss"] != "":
         train_session.load_data("clss", args["Dataset_clss"])
     if args["Model Version ID"] != "" and args["Model Version ID"] != "x":
-        version, model_id = args["Model Version ID"].split("#")
-        train_session.model.load_model(version, model_id)
-        mvid = [version.split("_")[0]] + [model_id]
-        training_settings = train_session.model.versions_path / version / "training_settings.json"
+        parsed_mvid = args["Model Version ID"].split("#")
+        name = train_session.model.name
+        if len(parsed_mvid) == 3:
+            name = parsed_mvid[2]
+        train_session.model.load_model(parsed_mvid[0], parsed_mvid[1], name=name)
+        mvid = [parsed_mvid[0].split("_")[0]] + [parsed_mvid[1]]
+        training_settings = (
+            train_session.root / "models" / name / "versions" / parsed_mvid[0] / "training_settings"
+            ".json "
+        )
     if args["Overfitting"]:
         train_session.overfit_tests(
             epochs=args["Epochs"],
