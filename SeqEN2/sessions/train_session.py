@@ -141,7 +141,7 @@ def main(args):
             / name
             / "versions"
             / parsed_mvid[0]
-            / "training_settings.json "
+            / "training_settings.json"
         )
     if args["Overfitting"]:
         train_session.overfit_tests(
