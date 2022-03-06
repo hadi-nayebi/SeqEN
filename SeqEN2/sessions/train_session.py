@@ -136,8 +136,12 @@ def main(args):
         train_session.model.load_model(parsed_mvid[0], parsed_mvid[1], name=name)
         mvid = [parsed_mvid[0].split("_")[0]] + [parsed_mvid[1]]
         training_settings = (
-            train_session.root / "models" / name / "versions" / parsed_mvid[0] / "training_settings"
-            ".json "
+            train_session.root
+            / "models"
+            / name
+            / "versions"
+            / parsed_mvid[0]
+            / "training_settings.json "
         )
     if args["Overfitting"]:
         train_session.overfit_tests(
