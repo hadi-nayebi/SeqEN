@@ -17,6 +17,7 @@ from torch.nn.utils import clip_grad_value_
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AAETrainingSettings
+from SeqEN2.utils.seq_tools import output_to_ndx
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -211,6 +212,6 @@ class AdversarialAutoencoder(Autoencoder):
             else:
                 reconstructor_output, _, encoded_output = self.forward_test(one_hot_input)
                 return {
-                    "reconstructor_output": reconstructor_output,
+                    "reconstructor_output": output_to_ndx(reconstructor_output, self.w),
                     "embedding": encoded_output,
                 }

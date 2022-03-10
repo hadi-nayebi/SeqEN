@@ -11,6 +11,7 @@ from torch import no_grad, transpose
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
 from SeqEN2.utils.custom_dataclasses import AAESSTrainingSettings
+from SeqEN2.utils.seq_tools import output_to_ndx
 
 
 # class for AAESS Classifier
@@ -134,7 +135,7 @@ class AdversarialAutoencoderSSDecoder(AdversarialAutoencoder, AutoencoderSSDecod
                     one_hot_input
                 )
                 return {
-                    "reconstructor_output": reconstructor_output,
+                    "reconstructor_output": output_to_ndx(reconstructor_output, self.w),
                     "ss_decoder_output": ss_decoder_output,
                     "embedding": encoded_output,
                 }
