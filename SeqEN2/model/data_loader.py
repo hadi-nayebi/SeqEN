@@ -6,7 +6,7 @@ from os.path import dirname
 from pathlib import Path
 from typing import Any, Dict
 
-from numpy import arange, array, concatenate, ndarray
+from numpy import arange, concatenate, ndarray
 from numpy.random import choice, permutation
 from torch import cat, tensor
 

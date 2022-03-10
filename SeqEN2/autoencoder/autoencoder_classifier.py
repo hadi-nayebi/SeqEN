@@ -17,7 +17,6 @@ from torch.nn.utils import clip_grad_value_
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AECTrainingSettings
-from SeqEN2.utils.seq_tools import get_consensus_seq
 from SeqEN2.utils.utils import get_map_location
 
 
