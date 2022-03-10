@@ -52,19 +52,6 @@ class AutoencoderClassifierSSDecoder(AutoencoderClassifier, AutoencoderSSDecoder
         ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
         return devectorized, classifier_output, ss_decoder_output, encoded
 
-    def save(self, model_dir, epoch):
-        super(AutoencoderClassifierSSDecoder, self).save(model_dir, epoch)
-        torch_save(self.classifier, model_dir / f"classifier_{epoch}.m")
-
-    def load(self, model_dir, model_id):
-        super(AutoencoderClassifierSSDecoder, self).load(model_dir, model_id)
-        self.classifier = torch_load(
-            model_dir / f"classifier_{model_id}.m", map_location=get_map_location()
-        )
-
-    def initialize_training_components(self):
-        super(AutoencoderClassifierSSDecoder, self).initialize_training_components()
-
     def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="ASC"):
         if input_vals is not None:
             input_ndx, target_vals_ss, target_vals_cl, one_hot_input = self.transform_input(
