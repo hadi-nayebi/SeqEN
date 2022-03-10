@@ -22,7 +22,6 @@ from SeqEN2.utils.custom_arg_parser import TestSessionArgParser
 
 
 class TestSession:
-
     root = Path(dirname(__file__)).parent.parent
     MIN_SPOT_SIZE = 0.05
 
@@ -52,7 +51,8 @@ class TestSession:
             self.model.load_model(version, model_id)
 
     def load_data(self, key, dataset_name):
-        self.model.load_data(key, dataset_name)
+        self.model.eval_only = True
+        self.model.load_eval_data(key, dataset_name)
 
     def load_arch(self, arch):
         arch_path = self.arch_dir / f"{arch}.json"
