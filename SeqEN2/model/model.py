@@ -22,6 +22,9 @@ from SeqEN2.autoencoder.adversarial_autoencoder_classifier import (
 from SeqEN2.autoencoder.adversarial_autoencoder_classifier_ss_decoder import (
     AdversarialAutoencoderClassifierSSDecoder,
 )
+from SeqEN2.autoencoder.adversarial_autoencoder_ss_decoder import (
+    AdversarialAutoencoderSSDecoder,
+)
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.autoencoder_classifier import AutoencoderClassifier
 from SeqEN2.autoencoder.autoencoder_classifier_ss_decoder import (
@@ -81,6 +84,8 @@ class Model:
             self.autoencoder = AutoencoderClassifierSSDecoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAEC":
             self.autoencoder = AdversarialAutoencoderClassifier(self.d1, self.dn, self.w, arch)
+        elif arch.type == "AAESS":
+            self.autoencoder = AdversarialAutoencoderSSDecoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAECSS":
             self.autoencoder = AdversarialAutoencoderClassifierSSDecoder(
                 self.d1, self.dn, self.w, arch
