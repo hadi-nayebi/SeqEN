@@ -6,15 +6,11 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from torch import load as torch_load
-from torch import no_grad
-from torch import save as torch_save
-from torch import transpose
+from torch import no_grad, transpose
 
 from SeqEN2.autoencoder.autoencoder_classifier import AutoencoderClassifier
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
 from SeqEN2.utils.custom_dataclasses import AECSSTrainingSettings
-from SeqEN2.utils.utils import get_map_location
 
 
 # class for AAE

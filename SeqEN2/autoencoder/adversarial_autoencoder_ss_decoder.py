@@ -6,21 +6,11 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from numpy.random import choice
-from torch import Tensor, argmax, cat
-from torch import load as torch_load
-from torch import no_grad, ones, optim, randperm
-from torch import save as torch_save
-from torch import sum as torch_sum
-from torch import tensor, transpose, zeros
-from torch.nn.functional import one_hot, unfold
+from torch import no_grad, transpose
 
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
-from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AAESSTrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc, get_consensus_seq
-from SeqEN2.utils.utils import get_map_location
 
 
 # class for AAE Classifier
