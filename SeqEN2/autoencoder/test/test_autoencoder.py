@@ -21,23 +21,25 @@ class TestAutoencoder(TestCase):
 
     root = Path(dirname(__file__)).parent.parent.parent
     device = device("cuda" if cuda.is_available() else "cpu")
-    DATASET_NAME_seq_ACTp = "kegg_ndx_ACTp_100"
+    DATASET_NAME_clss = "pdb_act_clss"
     autoencoder = None
     data_loader = None
     w = 20
     dn = 10
     d1 = 8
-    TEST_KEY = "CO657_07215"
+    TEST_KEY = "6U9H"
+    ARCH = "arch30.json"  # for FCN
+    # ARCH = "arch36.json"  # for Conv
 
     @classmethod
     def setUpClass(cls) -> None:
         # replace arch1.json to test other ones
-        arch_path = cls.root / "config" / "arch" / "arch5.json"
+        arch_path = cls.root / "config" / "arch" / cls.ARCH
         arch = Architecture(read_json(str(arch_path)))
         cls.autoencoder = Autoencoder(cls.d1, cls.dn, cls.w, arch)
         cls.data_loader = DataLoader()
-        cls.data_loader.load_test_data(cls.DATASET_NAME_seq_ACTp, cls.device)
-        cls.data_loader.load_train_data(cls.DATASET_NAME_seq_ACTp, cls.device)
+        cls.data_loader.load_test_data(cls.DATASET_NAME_clss, cls.device)
+        cls.data_loader.load_train_data(cls.DATASET_NAME_clss, cls.device)
         # random train sample
         cls.train_batch = list(cls.data_loader.get_train_batch(batch_size=10))[0]
         # fixed test sample
@@ -48,7 +50,9 @@ class TestAutoencoder(TestCase):
     def test_transform_input(self):
         # test batch returns a tuple (data, metadata)
         input_vals = self.test_batch[0]
-        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
+        input_ndx, _, _, one_hot_input = self.autoencoder.transform_input(
+            input_vals, self.device, input_keys="A--"
+        )
         self.assertEqual(
             input_vals.shape[0] - self.w + 1,
             input_ndx.shape[0],
@@ -61,7 +65,7 @@ class TestAutoencoder(TestCase):
         )
         # train batch returns data without any metadata
         input_vals = self.train_batch
-        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
+        input_ndx, _, _, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
         self.assertEqual(
             input_vals.shape[0] - self.w + 1,
             input_ndx.shape[0],
@@ -76,16 +80,17 @@ class TestAutoencoder(TestCase):
     def test_forward(self):
         # test batch returns a tuple (data, metadata)
         input_vals = self.test_batch[0]
-        input_ndx, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
-        devectorized = self.autoencoder.forward_test(one_hot_input)
+        input_ndx, _, _, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
+        devectorized, encoded = self.autoencoder.forward_test(one_hot_input)
         self.assertEqual(
             self.autoencoder.d0, devectorized.shape[1], "output.shape[1] do not match d0"
         )
+        self.assertEqual(self.autoencoder.dn, encoded.shape[1], "encoded.shape[1] do not match dn")
 
     def test_train_batch(self):
         # train batch returns data without any metadata
         self.autoencoder.initialize_for_training()
-        input_vals = self.train_batch
+        input_vals = {"clss": self.train_batch}
         self.autoencoder.train_batch(input_vals, self.device)
         # TODO: define a useful assert
 
@@ -120,20 +125,13 @@ class TestAutoencoder(TestCase):
             ae.training_settings = value
 
         self.assertRaises(TypeError, assign, self.autoencoder, "string")
-        self.assertRaises(KeyError, assign, self.autoencoder, {"generator": TrainingParams()})
-        self.assertRaises(
-            KeyError,
-            assign,
-            self.autoencoder,
-            {"reconstructor": TrainingParams(), "generator": TrainingParams()},
-        )
 
-    def test_saving_training_settings(self):
-        train_dir = self.root / "models" / "dummy"
-        self.autoencoder.save_training_settings(train_dir)
-        filepath = train_dir / "training_settings.json"
-        self.assertEqual((str(filepath), filepath.is_file()), (str(filepath), True))
-        system(f"rm {str(filepath)}")
+    # def test_saving_training_settings(self):
+    #     train_dir = self.root / "models" / "dummy"
+    #     self.autoencoder.save_training_settings(train_dir)
+    #     filepath = train_dir / "training_settings.json"
+    #     self.assertEqual((str(filepath), filepath.is_file()), (str(filepath), True))
+    #     system(f"rm {str(filepath)}")
 
     # def test_update_training_settings(self):
     #     self.autoencoder.training_settings = AETrainingSettings()
