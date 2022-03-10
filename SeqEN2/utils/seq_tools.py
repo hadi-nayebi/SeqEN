@@ -4,7 +4,17 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
-from torch import Tensor, diagonal, empty, eye, fliplr, index_select, mode, tensor
+from torch import (
+    Tensor,
+    argmax,
+    diagonal,
+    empty,
+    eye,
+    fliplr,
+    index_select,
+    mode,
+    tensor,
+)
 from torch.nn.functional import unfold
 
 
@@ -41,6 +51,8 @@ def get_seq(ndx, ndx_windows):
 
 
 def get_consensus_seq(seq, device):
+    if len(seq.shape) == 3:
+        seq = argmax(seq, dim=1).reshape((-1, seq.shape[1]))
     output_length, w = seq.shape
     seq_length = output_length + w - 1
     output = empty(seq_length, device=device)
