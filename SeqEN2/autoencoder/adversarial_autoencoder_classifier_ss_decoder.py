@@ -6,21 +6,12 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from numpy.random import choice
-from torch import Tensor, argmax, cat
-from torch import load as torch_load
-from torch import no_grad, ones, optim, randperm
-from torch import save as torch_save
-from torch import sum as torch_sum
-from torch import tensor, transpose, zeros
+from torch import no_grad, transpose
 
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
 from SeqEN2.autoencoder.autoencoder_classifier import AutoencoderClassifier
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
-from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AAECSSTrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc, get_consensus_seq
-from SeqEN2.utils.utils import get_map_location
 
 
 # class for AAE Classifier
@@ -136,3 +127,28 @@ class AdversarialAutoencoderClassifierSSDecoder(
                 self.test_one_batch(input_vals["ss"], device, input_keys="AS")
             if "clss" in input_vals.keys():
                 self.test_one_batch(input_vals["clss"], device, input_keys="ACS")
+
+    @staticmethod
+    def assert_input_type(input_vals):
+        assert isinstance(input_vals, Dict), "AAECSS requires a dict as input_vals"
+
+    def eval_one_batch(self, input_vals, device, input_keys="A--", embed_only=False):
+        if input_vals is not None:
+            _, _, _, one_hot_input = self.transform_input(input_vals, device, input_keys=input_keys)
+            if embed_only:
+                encoded_output = self.forward_embed(one_hot_input)
+                return {"embedding": encoded_output}
+            else:
+                (
+                    reconstructor_output,
+                    _,
+                    classifier_output,
+                    ss_decoder_output,
+                    encoded_output,
+                ) = self.forward_test(one_hot_input)
+                return {
+                    "reconstructor_output": reconstructor_output,
+                    "classifier_output": classifier_output,
+                    "ss_decoder_output": ss_decoder_output,
+                    "embedding": encoded_output,
+                }
