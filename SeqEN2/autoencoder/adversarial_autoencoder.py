@@ -201,3 +201,16 @@ class AdversarialAutoencoder(Autoencoder):
     @staticmethod
     def assert_input_type(input_vals):
         assert isinstance(input_vals, Dict), "AAE requires a dict as input_vals"
+
+    def eval_one_batch(self, input_vals, device, input_keys="A--", embed_only=False):
+        if input_vals is not None:
+            _, _, _, one_hot_input = self.transform_input(input_vals, device, input_keys=input_keys)
+            if embed_only:
+                encoded_output = self.forward_embed(one_hot_input)
+                return {"embedding": encoded_output}
+            else:
+                reconstructor_output, _, encoded_output = self.forward_test(one_hot_input)
+                return {
+                    "reconstructor_output": reconstructor_output,
+                    "embedding": encoded_output,
+                }
