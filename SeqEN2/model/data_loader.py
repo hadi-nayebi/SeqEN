@@ -71,25 +71,6 @@ def write_json(data_dict, filename, encoder=None) -> None:
         raise IOError("File format must be .gz or .json.gz")
 
 
-def join(items) -> tensor:
-    output = cat(items, 0)
-    return output
-
-
-def to_tensor(data, key, device) -> (tensor, Dict):
-    output = None
-    metadata = {"name": key}
-    for i, (key, value) in enumerate(data.items()):
-        if output is None:
-            output = tensor(value, device=device).reshape((-1, 1))
-            metadata[f"{i}"] = {"name": key, "shape": len(value)}
-        else:
-            output = cat((output, tensor(value, device=device).reshape((-1, 1))), 1)
-            metadata[f"{i}"] = {"name": key, "shape": len(value)}
-    assert output is not None
-    return output, metadata
-
-
 class DataLoader(object):
     """DataLoader maintains train/test data for training/testing model."""
 
@@ -110,12 +91,21 @@ class DataLoader(object):
     def test_data(self) -> dict:
         return self._test_data
 
+    def load_data(self, dataset, device) -> None:
+        filename = self.root / "data" / f"{dataset}.json.gz"
+        self._test_data = read_json(str(filename))
+        # to tensor, metadata
+        for key in self._test_data.keys():
+            self._test_data[key] = self.to_tensor(self._test_data[key], key, device)
+        self.test_data_keys = list(self._test_data.keys())
+        self.test_data_size = len(self._test_data)
+
     def load_test_data(self, dataset, device) -> None:
         filename = self.root / "data" / f"{dataset}_test.json.gz"
         self._test_data = read_json(str(filename))
         # to tensor, metadata
         for key in self._test_data.keys():
-            self._test_data[key] = to_tensor(self._test_data[key], key, device)
+            self._test_data[key] = self.to_tensor(self._test_data[key], key, device)
         self.test_data_keys = list(self._test_data.keys())
         self.test_data_size = len(self._test_data)
 
@@ -124,7 +114,7 @@ class DataLoader(object):
         self._train_data = read_json(str(filename))
         # to tensor, metadata
         for key in self._train_data.keys():
-            self._train_data[key] = to_tensor(self._train_data[key], key, device)
+            self._train_data[key] = self.to_tensor(self._train_data[key], key, device)
         self.train_data_size = len(self._train_data)
 
     def get_train_batch(self, batch_size=128, max_size=None) -> tensor:
@@ -142,7 +132,7 @@ class DataLoader(object):
                     repeat_data_fold = (max_size // keys_len) + 1
                     keys = concatenate([keys] * repeat_data_fold, axis=0)
             for i in range(num_batch):
-                yield join(
+                yield self.join(
                     [
                         self._train_data[key][0]
                         for key in keys[i * batch_size : (i + 1) * batch_size]
@@ -176,3 +166,22 @@ class DataLoader(object):
         all_data.update(self._train_data)
         for key in all_data.keys():
             yield all_data[key]
+
+    @staticmethod
+    def join(items) -> tensor:
+        output = cat(items, 0)
+        return output
+
+    @staticmethod
+    def to_tensor(data, pr_key, device) -> (tensor, Dict):
+        output = None
+        metadata = {"name": pr_key}
+        for i, (key, value) in enumerate(data.items()):
+            if output is None:
+                output = tensor(value, device=device).reshape((-1, 1))
+                metadata[f"{i}"] = {"name": key, "shape": len(value)}
+            else:
+                output = cat((output, tensor(value, device=device).reshape((-1, 1))), 1)
+                metadata[f"{i}"] = {"name": key, "shape": len(value)}
+        assert output is not None
+        return output, metadata
