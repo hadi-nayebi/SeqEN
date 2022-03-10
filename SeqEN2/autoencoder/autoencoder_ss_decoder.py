@@ -196,3 +196,19 @@ class AutoencoderSSDecoder(Autoencoder):
                 self.test_one_batch(input_vals["ss"], device, input_keys="AS")
             if "clss" in input_vals.keys():
                 self.test_one_batch(input_vals["clss"], device, input_keys="AS-")
+
+    def eval_one_batch(self, input_vals, device, input_keys="A--", embed_only=False):
+        if input_vals is not None:
+            _, _, _, one_hot_input = self.transform_input(input_vals, device, input_keys=input_keys)
+            if embed_only:
+                encoded_output = self.forward_embed(one_hot_input)
+                return {"embedding": encoded_output}
+            else:
+                reconstructor_output, ss_decoder_output, encoded_output = self.forward_test(
+                    one_hot_input
+                )
+                return {
+                    "reconstructor_output": reconstructor_output,
+                    "ss_decoder_output": ss_decoder_output,
+                    "embedding": encoded_output,
+                }
