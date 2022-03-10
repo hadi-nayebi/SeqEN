@@ -29,7 +29,7 @@ from SeqEN2.autoencoder.autoencoder_classifier_ss_decoder import (
 )
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
 from SeqEN2.model.data_loader import DataLoader
-from SeqEN2.utils.seq_tools import sliding_window
+from SeqEN2.utils.seq_tools import ndx_to_seq, sliding_window
 from SeqEN2.utils.utils import set_random_seed
 
 
@@ -54,14 +54,19 @@ class Model:
         self.data_loader_cl = DataLoader()
         self.data_loader_ss = DataLoader()
         self.data_loader_clss = DataLoader()
+        self.eval_data_loader = DataLoader()
         self.dataset_name_cl = None
         self.dataset_name_ss = None
         self.dataset_name_clss = None
+        self.eval_data_loader_key = None
+        self.eval_data_loader_name = None
         self.config = None
         if not self.path.exists():
             self.path.mkdir()
             self.versions_path.mkdir()
         self.random_seed = 0
+        self.eval_only = False
+        self.embed_only = False
 
     def build_model(self, arch):
         if arch.type == "AE":
@@ -102,6 +107,12 @@ class Model:
             self.data_loader_clss.load_test_data(dataset_name, self.device)
             self.data_loader_clss.load_train_data(dataset_name, self.device)
             self.dataset_name_clss = dataset_name
+
+    def load_eval_data(self, key, dataset_name):
+        if self.eval_only:
+            self.eval_data_loader.load_data(dataset_name, self.device)
+            self.eval_data_loader_key = key
+            self.eval_data_loader_name = dataset_name
 
     def get_train_batch(self, batch_size, max_size=None):
         for batch_cl, batch_ss, batch_clss in zip(
@@ -182,6 +193,7 @@ class Model:
         model_path = str(train_dir / f"epoch_{epoch}.model")
         torch_save(self.autoencoder, model_path)
         model.add_file(model_path)
+        system(f"rm {model_path}")
         self.autoencoder.save(train_dir, epoch)
         self.autoencoder.save_training_settings(train_dir)
 
@@ -206,6 +218,7 @@ class Model:
         save_model_interval=1,
         branch="",
     ):
+        assert not self.eval_only, "Model is in eval_only mode and cannot be trained"
         self.autoencoder.ignore_continuity = ignore_continuity
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
@@ -263,100 +276,65 @@ class Model:
         model_dir = self.root / "models" / name / "versions" / version
         self.autoencoder.load(model_dir, model_id)
 
-    def get_embedding(self, num_test_items=-1, test_items=None, dataset="cl"):
-        if dataset == "cl":
-            for input_vals, metadata in self.data_loader_cl.get_test_batch(
-                batch_size=num_test_items, test_items=test_items
-            ):
-                embedding, classifier_output, consensus_ss = self.autoencoder.embed_batch(
-                    input_vals, self.device, dataset=dataset
-                )
-                new_df = DataFrame([])
-                new_df.attrs["name"] = metadata["name"]
-                new_df.attrs["seq_ndx"] = input_vals[:, 0]
-                new_df.attrs["trg_act"] = input_vals[:, 1]
-                new_df.attrs["cons_ss"] = consensus_ss
-                new_df["unique_id"] = arange(classifier_output[:, 0].shape[0])
-                new_df["act_pred"] = classifier_output[:, 0].cpu()
-                new_df["act_trg"] = (
+    def get_embedding(self, num_test_items=-1, test_items=None):
+        assert self.eval_only, "model is not in eval_only mode"
+        for input_vals, metadata in self.eval_data_loader.get_test_batch(
+            batch_size=num_test_items, test_items=test_items
+        ):
+            batch = {self.eval_data_loader_key: input_vals}
+            result = self.autoencoder.eval_batch(batch, self.device, embed_only=self.embed_only)
+            pr_df = DataFrame([])
+            pr_df.attrs["name"] = metadata["name"]
+            # create a unique id col
+            pr_df["unique_id"] = arange(result["embedding"].shape[0])
+            # slice input seq
+            pr_df.attrs["seq"] = ndx_to_seq(input_vals[:, 0], self.autoencoder.aa_keys)
+            pr_df["w_seq"] = sliding_window(
+                input_vals[:, 0].reshape((-1, 1)), self.w, keys=self.autoencoder.aa_keys
+            )
+            # target act, ss
+            pr_df.attrs["trg_act"] = None
+            pr_df.attrs["trg_ss"] = None
+            pr_df["w_trg_act"] = None
+            pr_df["w_trg_ss"] = None
+            if self.eval_data_loader_key == "cl":
+                pr_df.attrs["trg_act"] = input_vals[:, 1].cpu()
+                pr_df["w_trg_act"] = (
                     sliding_window(input_vals[:, 1].reshape((-1, 1)), self.w).mean(axis=1).cpu()
                 )
-                new_df["slices"] = sliding_window(
-                    input_vals[:, 0].reshape((-1, 1)), self.w, keys="WYFMILVAGPSTCEDQNHRK*"
+            elif self.eval_data_loader_key == "ss":
+                pr_df.attrs["trg_ss"] = input_vals[:, 1].cpu()
+                pr_df["w_trg_ss"] = sliding_window(
+                    input_vals[:, 1].reshape((-1, 1)), self.w, keys=self.autoencoder.ss_keys
                 )
-                new_df["embedding"] = embedding.tolist()
-                yield new_df
-
-        elif dataset == "clss":
-            for input_vals, metadata in self.data_loader_clss.get_test_batch(
-                batch_size=num_test_items, test_items=test_items
-            ):
-                embedding, classifier_output, consensus_ss = self.autoencoder.embed_batch(
-                    input_vals, self.device, dataset=dataset
-                )
-                new_df = DataFrame([])
-                new_df.attrs["name"] = metadata["name"]
-                new_df.attrs["seq_ndx"] = input_vals[:, 0]
-                new_df.attrs["trg_act"] = input_vals[:, 2]
-                new_df.attrs["trg_ss"] = input_vals[:, 1]
-                new_df.attrs["cons_ss"] = consensus_ss
-                new_df["unique_id"] = arange(classifier_output[:, 0].shape[0])
-                new_df["act_pred"] = classifier_output[:, 0].cpu()
-                new_df["act_trg"] = (
+            elif self.eval_data_loader_key == "clss":
+                pr_df.attrs["trg_ss"] = input_vals[:, 1].cpu()
+                pr_df.attrs["trg_act"] = input_vals[:, 2].cpu()
+                pr_df["w_trg_act"] = (
                     sliding_window(input_vals[:, 2].reshape((-1, 1)), self.w).mean(axis=1).cpu()
                 )
-                new_df["slices"] = sliding_window(
-                    input_vals[:, 0].reshape((-1, 1)), self.w, keys="WYFMILVAGPSTCEDQNHRK*"
+                pr_df["w_trg_ss"] = sliding_window(
+                    input_vals[:, 1].reshape((-1, 1)), self.w, keys=self.autoencoder.ss_keys
                 )
-                new_df["slices_ss"] = sliding_window(
-                    input_vals[:, 1].reshape((-1, 1)), self.w, keys="CSTIGHBE*"
+            # result seq, ss, act
+            pr_df.attrs["cons_seq"] = None
+            cons_seq = result.get("consensus_seq", None)
+            if cons_seq is not None:
+                pr_df.attrs["cons_seq"] = ndx_to_seq(cons_seq, self.autoencoder.aa_keys)
+                pr_df["w_cons_seq"] = sliding_window(
+                    cons_seq.reshape((-1, 1)), self.w, keys=self.autoencoder.aa_keys
                 )
-                new_df["embedding"] = embedding.tolist()
-                yield new_df
-
-    def get_embedding_all(self, dataset="cl"):
-        if dataset == "cl":
-            for input_vals, metadata in self.data_loader_cl.get_all():
-                embedding, classifier_output, consensus_ss = self.autoencoder.embed_batch(
-                    input_vals, self.device, dataset=dataset
+            pr_df.attrs["cons_ss"] = None
+            cons_ss = result.get("consensus_ss", None)
+            if cons_ss is not None:
+                pr_df.attrs["cons_ss"] = ndx_to_seq(cons_ss, self.autoencoder.ss_keys)
+                pr_df["w_cons_ss"] = sliding_window(
+                    cons_ss.reshape((-1, 1)), self.w, keys=self.autoencoder.ss_keys
                 )
-                new_df = DataFrame([])
-                new_df.attrs["name"] = metadata["name"]
-                new_df.attrs["seq_ndx"] = input_vals[:, 0]
-                new_df.attrs["trg_act"] = input_vals[:, 1]
-                new_df.attrs["cons_ss"] = consensus_ss
-                new_df["unique_id"] = arange(classifier_output[:, 0].shape[0])
-                new_df["act_pred"] = classifier_output[:, 0].cpu()
-                new_df["act_trg"] = (
-                    sliding_window(input_vals[:, 1].reshape((-1, 1)), self.w).mean(axis=1).cpu()
-                )
-                new_df["slices"] = sliding_window(
-                    input_vals[:, 0].reshape((-1, 1)), self.w, keys="WYFMILVAGPSTCEDQNHRK*"
-                )
-                new_df["embedding"] = embedding.tolist()
-                yield new_df
-
-        elif dataset == "clss":
-            for input_vals, metadata in self.data_loader_clss.get_all():
-                embedding, classifier_output, consensus_ss = self.autoencoder.embed_batch(
-                    input_vals, self.device, dataset=dataset
-                )
-                new_df = DataFrame([])
-                new_df.attrs["name"] = metadata["name"]
-                new_df.attrs["seq_ndx"] = input_vals[:, 0]
-                new_df.attrs["trg_act"] = input_vals[:, 2]
-                new_df.attrs["trg_ss"] = input_vals[:, 1]
-                new_df.attrs["cons_ss"] = consensus_ss
-                new_df["unique_id"] = arange(classifier_output[:, 0].shape[0])
-                new_df["act_pred"] = classifier_output[:, 0].cpu()
-                new_df["act_trg"] = (
-                    sliding_window(input_vals[:, 2].reshape((-1, 1)), self.w).mean(axis=1).cpu()
-                )
-                new_df["slices"] = sliding_window(
-                    input_vals[:, 0].reshape((-1, 1)), self.w, keys="WYFMILVAGPSTCEDQNHRK*"
-                )
-                new_df["slices_ss"] = sliding_window(
-                    input_vals[:, 1].reshape((-1, 1)), self.w, keys="CSTIGHBE*"
-                )
-                new_df["embedding"] = embedding.tolist()
-                yield new_df
+            pr_df.attrs["pred_act"] = None
+            pred_act = result.get("classifier_output", None)
+            if pred_act is not None:
+                pr_df.attrs["pred_act"] = pred_act[:, 0].cpu()
+            # embedding
+            pr_df["embedding"] = result["embedding"].tolist()
+            yield pr_df
