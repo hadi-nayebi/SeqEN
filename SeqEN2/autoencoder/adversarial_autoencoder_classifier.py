@@ -6,33 +6,19 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from numpy.random import choice
-from torch import Tensor, argmax, cat
-from torch import load as torch_load
-from torch import no_grad, ones, optim, randperm
-from torch import save as torch_save
-from torch import sum as torch_sum
-from torch import tensor, transpose, zeros
-from torch.nn.functional import one_hot, unfold
+from torch import no_grad, transpose
 
 from SeqEN2.autoencoder.adversarial_autoencoder import AdversarialAutoencoder
-from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
+from SeqEN2.autoencoder.autoencoder_classifier import AutoencoderClassifier
 from SeqEN2.utils.custom_dataclasses import AAECTrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
-from SeqEN2.utils.utils import get_map_location
 
 
 # class for AAE Classifier
-class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
+class AdversarialAutoencoderClassifier(AdversarialAutoencoder, AutoencoderClassifier):
     def __init__(self, d1, dn, w, arch):
         super(AdversarialAutoencoderClassifier, self).__init__(d1, dn, w, arch)
-        assert self.arch.classifier is not None, "arch missing classifier."
-        self.classifier = LayerMaker().make(self.arch.classifier)
         # training components
         self._training_settings = AAECTrainingSettings()
-        # define customized optimizers
-        self.classifier_optimizer = None
-        self.classifier_lr_scheduler = None
 
     @property
     def training_settings(self) -> AAECTrainingSettings:
@@ -53,12 +39,6 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
                 f"Training settings must be a dict or None or type AAECTrainingSettings, {type(value)} is passed."
             )
 
-    def forward_classifier(self, one_hot_input):
-        vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
-        encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
-        classifier_output = self.classifier(encoded)
-        return classifier_output
-
     def forward_test(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
         encoded = self.encoder(transpose(vectorized.reshape(-1, self.w, self.d1), 1, 2))
@@ -66,57 +46,23 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         devectorized = self.devectorizer(decoded)
         discriminator_output = self.discriminator(encoded)
         classifier_output = self.classifier(encoded)
-        return devectorized, discriminator_output, classifier_output
+        return devectorized, discriminator_output, classifier_output, encoded
 
-    def save(self, model_dir, epoch):
-        super(AdversarialAutoencoderClassifier, self).save(model_dir, epoch)
-        torch_save(self.classifier, model_dir / f"classifier_{epoch}.m")
+    def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A-C"):
+        if input_vals is not None:
+            input_ndx, _, target_vals_cl, one_hot_input = self.transform_input(
+                input_vals, device, input_noise=input_noise, input_keys=input_keys
+            )
+            self.train_reconstructor(one_hot_input, input_ndx)
+            # train for continuity
+            self.train_continuity(one_hot_input)
+            self.train_discriminator(one_hot_input, device)
+            if "C" in input_keys:
+                self.train_classifier(one_hot_input, target_vals_cl)
 
-    def load(self, model_dir, model_id):
-        super(AdversarialAutoencoderClassifier, self).load(model_dir, model_id)
-        self.classifier = torch_load(
-            model_dir / f"classifier_{model_id}.m", map_location=get_map_location()
-        )
-
-    def initialize_training_components(self):
-        super(AdversarialAutoencoderClassifier, self).initialize_training_components()
-        # define customized optimizers
-        self.classifier_optimizer = optim.SGD(
-            [
-                {"params": self.vectorizer.parameters()},
-                {"params": self.encoder.parameters()},
-                {"params": self.classifier.parameters()},
-            ],
-            lr=self._training_settings.classifier.lr,
-        )
-        self.classifier_lr_scheduler = CustomLRScheduler(
-            self.classifier_optimizer,
-            factor=self._training_settings.classifier.factor,
-            patience=self._training_settings.classifier.patience,
-            min_lr=self._training_settings.classifier.min_lr,
-        )
-
-    def transform_input(self, input_vals, device, input_noise=0.0):
-        raise NotImplementedError("AAEC using custom transform input methods.")
-
-    def transform_input_cl(self, input_vals, device, input_noise=0.0):
-        # scans by sliding window of w
-        assert isinstance(input_vals, Tensor)
-        kernel_size = (input_vals.shape[1], self.w)
-        input_vals = unfold(input_vals.T[None, None, :, :], kernel_size=kernel_size)[0].T
-        input_ndx = input_vals[:, : self.w].long()
-        target_vals = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
-        target_vals = cat((target_vals, 1 - target_vals), 1).float()
-        one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
-        if input_noise > 0.0:
-            ndx = randperm(self.w)
-            size = list(one_hot_input.shape)
-            size[-1] = 1
-            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
-            mutated_one_hot = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
-            return input_ndx, target_vals, mutated_one_hot
-        else:
-            return input_ndx, target_vals, one_hot_input
+    @staticmethod
+    def assert_input_type(input_vals):
+        assert isinstance(input_vals, Dict), "AAEC requires a dict as input_vals"
 
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
@@ -126,88 +72,38 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         :param input_noise:
         :return:
         """
+        self.assert_input_type(input_vals)
         self.train()
-        input_ndx, target_vals, one_hot_input = self.transform_input_cl(
-            input_vals, device, input_noise=input_noise
-        )
-        # train encoder_decoder
-        self.reconstructor_optimizer.zero_grad()
-        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
-        reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
-        self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss", reconstructor_loss.item())
-        self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
-        self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-        # train for continuity
-        if not self.ignore_continuity:
-            self.continuity_optimizer.zero_grad()
-            encoded_output = self.forward_embed(one_hot_input)
-            continuity_loss_r = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+        if "cl" in input_vals.keys():
+            self.train_one_batch(
+                input_vals["cl"], input_noise=input_noise, device=device, input_keys="AC"
             )
-            continuity_loss_l = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+        if "ss" in input_vals.keys():
+            self.train_one_batch(
+                input_vals["ss"], input_noise=input_noise, device=device, input_keys="A-"
             )
-            continuity_loss = continuity_loss_r + continuity_loss_l
-            continuity_loss.backward()
-            self.continuity_optimizer.step()
-            self.log("continuity_loss", continuity_loss.item())
-            self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
-            self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-            self.continuity_lr_scheduler.step(continuity_loss.item())
-            del encoded_output
-            del continuity_loss
-        # train generator
-        self.generator_optimizer.zero_grad()
-        generator_output = self.forward_generator(one_hot_input)
-        generator_loss = self.criterion_NLLLoss(
-            generator_output,
-            zeros((generator_output.shape[0],), device=device).long(),
-        )
-        generator_loss.backward()
-        self.generator_optimizer.step()
-        self.log("generator_loss", generator_loss.item())
-        self.log("generator_LR", self.generator_lr_scheduler.get_last_lr())
-        self._training_settings.generator.lr = self.generator_lr_scheduler.get_last_lr()
-        # train discriminator
-        self.discriminator_optimizer.zero_grad()
-        ndx = randperm(self.w)
-        discriminator_output = self.forward_discriminator(one_hot_input[:, ndx, :])
-        discriminator_loss = self.criterion_NLLLoss(
-            discriminator_output,
-            ones((discriminator_output.shape[0],), device=device).long(),
-        )
-        discriminator_loss.backward()
-        self.discriminator_optimizer.step()
-        self.log("discriminator_loss", discriminator_loss.item())
-        self.log("discriminator_LR", self.discriminator_lr_scheduler.get_last_lr())
-        self._training_settings.discriminator.lr = self.discriminator_lr_scheduler.get_last_lr()
-        gen_disc_loss = 0.5 * (generator_loss.item() + discriminator_loss.item())
-        self.generator_lr_scheduler.step(gen_disc_loss)
-        self.discriminator_lr_scheduler.step(gen_disc_loss)
-        # train classifier
-        self.classifier_optimizer.zero_grad()
-        classifier_output = self.forward_classifier(one_hot_input)
-        classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-        classifier_loss.backward()
-        self.classifier_optimizer.step()
-        self.log("classifier_loss", classifier_loss.item())
-        self.log("classifier_LR", self.classifier_lr_scheduler.get_last_lr())
-        self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
-        self.classifier_lr_scheduler.step(classifier_loss.item())
-        # clean up
-        del input_ndx
-        del one_hot_input
-        del reconstructor_loss
-        del reconstructor_output
-        del generator_output
-        del generator_loss
-        del discriminator_output
-        del discriminator_loss
-        del classifier_output
-        del classifier_loss
+        if "clss" in input_vals.keys():
+            self.train_one_batch(
+                input_vals["clss"], input_noise=input_noise, device=device, input_keys="A-C"
+            )
+
+    def test_one_batch(self, input_vals, device, input_keys="A-C"):
+        if input_vals is not None:
+            input_ndx, _, target_vals_cl, one_hot_input = self.transform_input(
+                input_vals, device, input_keys=input_keys
+            )
+            (
+                reconstructor_output,
+                discriminator_output,
+                classifier_output,
+                encoded_output,
+            ) = self.forward_test(one_hot_input)
+            self.test_reconstructor(reconstructor_output, input_ndx, device)
+            self.test_discriminator(one_hot_input, discriminator_output, device)
+            # test for continuity
+            self.test_continuity(encoded_output)
+            if "C" in input_keys:
+                self.test_classifier(classifier_output, target_vals_cl)
 
     def test_batch(self, input_vals, device):
         """
@@ -215,40 +111,12 @@ class AdversarialAutoencoderClassifier(AdversarialAutoencoder):
         :param input_vals:
         :return:
         """
+        self.assert_input_type(input_vals)
         self.eval()
         with no_grad():
-            input_ndx, target_vals, one_hot_input = self.transform_input_cl(input_vals, device)
-            (
-                reconstructor_output,
-                generator_output,
-                classifier_output,
-            ) = self.forward_test(one_hot_input)
-            reconstructor_loss = self.criterion_NLLLoss(
-                reconstructor_output, input_ndx.reshape((-1,))
-            )
-            classifier_loss = self.criterion_MSELoss(classifier_output, target_vals)
-            # reconstructor acc
-            reconstructor_ndx = argmax(reconstructor_output, dim=1)
-            reconstructor_accuracy = (
-                torch_sum(reconstructor_ndx == input_ndx.reshape((-1,)))
-                / reconstructor_ndx.shape[0]
-            )
-            consensus_seq_acc, _ = consensus_acc(
-                input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-            )
-            # reconstruction_loss, discriminator_loss, classifier_loss
-            self.log("test_reconstructor_loss", reconstructor_loss.item())
-            self.log("test_classifier_loss", classifier_loss.item())
-            self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
-            self.log("test_consensus_accuracy", consensus_seq_acc)
-            # test for continuity
-            if not self.ignore_continuity:
-                encoded_output = self.forward_embed(one_hot_input)
-                continuity_loss_r = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
-                )
-                continuity_loss_l = self.criterion_MSELoss(
-                    encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
-                )
-                continuity_loss = continuity_loss_r + continuity_loss_l
-                self.log("test_continuity_loss", continuity_loss.item())
+            if "cl" in input_vals.keys():
+                self.test_one_batch(input_vals["cl"], device, input_keys="AC")
+            if "ss" in input_vals.keys():
+                self.test_one_batch(input_vals["ss"], device, input_keys="A-")
+            if "clss" in input_vals.keys():
+                self.test_one_batch(input_vals["clss"], device, input_keys="A-C")
