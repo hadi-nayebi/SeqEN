@@ -121,9 +121,9 @@ class TestSession:
             n_iter=10000,
             n_jobs=-1,
         )
-        X_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
+        x_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
         for i in range(dim):
-            all_embeddings[f"tsne_{i}"] = X_embedded[:, i]
+            all_embeddings[f"tsne_{i}"] = x_embedded[:, i]
         return all_embeddings
 
     def isomap_embeddings(self, dim=2):
@@ -134,9 +134,9 @@ class TestSession:
         all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
         n_neighbors = int(sqrt(len(all_embeddings["uid"])))
         model = Isomap(n_components=dim, n_neighbors=n_neighbors, n_jobs=-1)
-        X_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
+        x_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
         for i in range(dim):
-            all_embeddings[f"isomap_{i}"] = X_embedded[:, i]
+            all_embeddings[f"isomap_{i}"] = x_embedded[:, i]
         return all_embeddings
 
     def plot_embedding_2d(self, method="tsne"):
