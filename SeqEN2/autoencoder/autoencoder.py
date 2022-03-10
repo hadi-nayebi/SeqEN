@@ -20,13 +20,14 @@ from torch.nn.utils import clip_grad_value_
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.model.data_loader import read_json, write_json
 from SeqEN2.utils.custom_dataclasses import AETrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
+from SeqEN2.utils.seq_tools import consensus_acc, get_consensus_seq
 from SeqEN2.utils.utils import get_map_location
 
 
 # class for AE
 class Autoencoder(Module):
     aa_keys = "WYFMILVAGPSTCEDQNHRK*"  # amino acids class labels
+    ss_keys = "CSTIGHBE*"
     d0 = 21  # amino acids class size
     g_clip = 1.0
 
@@ -328,6 +329,25 @@ class Autoencoder(Module):
             # test for continuity
             self.test_continuity(encoded_output)
 
+    def eval_one_batch(self, input_vals, device, input_keys="A--", embed_only=False):
+        if input_vals is not None:
+            input_ndx, _, _, one_hot_input = self.transform_input(
+                input_vals, device, input_keys=input_keys
+            )
+            if embed_only:
+                encoded_output = self.forward_embed(one_hot_input)
+                return {"embedding": encoded_output}
+            else:
+                reconstructor_output, encoded_output = self.forward_test(one_hot_input)
+                consensus_seq = get_consensus_seq(
+                    argmax(reconstructor_output, dim=1).reshape((-1, self.w)), device
+                )
+                return {
+                    "consensus_seq": consensus_seq,
+                    "embedding": encoded_output,
+                    "reconstructor_output": reconstructor_output,
+                }
+
     def test_batch(self, input_vals, device):
         """
         Test a single batch of data, this will move into autoencoder
@@ -347,3 +367,21 @@ class Autoencoder(Module):
     @staticmethod
     def assert_input_type(input_vals):
         assert isinstance(input_vals, Dict), "AE requires a dict as input_vals"
+
+    def eval_batch(self, input_vals, device, embed_only=False):
+        self.assert_input_type(input_vals)
+        assert len(input_vals) == 1, "more than one item in input_vals for eval"
+        self.eval()
+        with no_grad():
+            if "cl" in input_vals.keys():
+                return self.eval_one_batch(
+                    input_vals["cl"], device, input_keys="A-", embed_only=embed_only
+                )
+            elif "ss" in input_vals.keys():
+                return self.eval_one_batch(
+                    input_vals["ss"], device, input_keys="A-", embed_only=embed_only
+                )
+            elif "clss" in input_vals.keys():
+                return self.eval_one_batch(
+                    input_vals["clss"], device, input_keys="A--", embed_only=embed_only
+                )
