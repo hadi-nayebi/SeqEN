@@ -17,6 +17,7 @@ from torch.nn.utils import clip_grad_value_
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AECTrainingSettings
+from SeqEN2.utils.seq_tools import get_consensus_seq
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -193,3 +194,19 @@ class AutoencoderClassifier(Autoencoder):
                 self.test_one_batch(input_vals["ss"], device, input_keys="A-")
             if "clss" in input_vals.keys():
                 self.test_one_batch(input_vals["clss"], device, input_keys="A-C")
+
+    def eval_one_batch(self, input_vals, device, input_keys="A--", embed_only=False):
+        if input_vals is not None:
+            _, _, _, one_hot_input = self.transform_input(input_vals, device, input_keys=input_keys)
+            if embed_only:
+                encoded_output = self.forward_embed(one_hot_input)
+                return {"embedding": encoded_output}
+            else:
+                reconstructor_output, classifier_output, encoded_output = self.forward_test(
+                    one_hot_input
+                )
+                return {
+                    "reconstructor_output": reconstructor_output,
+                    "classifier_output": classifier_output,
+                    "embedding": encoded_output,
+                }
