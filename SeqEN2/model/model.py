@@ -65,13 +65,18 @@ class Model:
         self.eval_data_loader_key = None
         self.eval_data_loader_name = None
         self.config = None
-        if not self.path.exists():
-            self.path.mkdir()
-            self.versions_path.mkdir()
-            self.results.mkdir()
         self.random_seed = 0
         self.eval_only = False
         self.embed_only = False
+        self.make_dirs()
+
+    def make_dirs(self):
+        if not self.path.exists():
+            self.path.mkdir()
+        if not self.versions_path.exists():
+            self.versions_path.mkdir()
+        if not self.results.exists():
+            self.results.mkdir()
 
     def build_model(self, arch):
         if arch.type == "AE":
