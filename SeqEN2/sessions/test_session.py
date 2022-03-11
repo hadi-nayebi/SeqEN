@@ -13,6 +13,7 @@ from numpy import array, sqrt, unique
 from pandas import concat, read_pickle
 from plotly.offline import plot
 from sklearn.manifold import TSNE
+from tqdm import tqdm
 
 from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import read_json
@@ -76,7 +77,9 @@ class TestSession:
             embeddings_dir.mkdir()
         # getting embeddings
         self.embedding_results = {}
-        for item in self.model.get_embedding(num_test_items=num_test_items, test_items=test_items):
+        for item in tqdm(
+            self.model.get_embedding(num_test_items=num_test_items, test_items=test_items)
+        ):
             self.embedding_results[item.attrs["name"]] = item
             datafile = embeddings_dir / f"{item.attrs['name']}.pkl.bz2"
             item.to_pickle(datafile)
@@ -200,6 +203,8 @@ class TestSession:
         plot(fig, filename=str(html_filename), auto_open=auto_open)
 
         # python ./SeqEN2/sessions/test_session.py -n dummy -mv 202201222143_AAECSS_arch7 -mid 0 -dcl kegg_ndx_ACTp_100 -a arch7 -teb 100 -ge -tsne 2
+        # python3 ../../../SeqEN2/sessions/test_session.py -n AECSS -mv 202203042153_AECSS_arch66 -mid 24 -dclss single_act_clss_test -a arch66
+        # -teb -1 -ge
 
 
 def main(args):
