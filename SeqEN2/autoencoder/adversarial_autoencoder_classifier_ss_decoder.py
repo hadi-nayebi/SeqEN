@@ -150,6 +150,6 @@ class AdversarialAutoencoderClassifierSSDecoder(
                 return {
                     "reconstructor_output": output_to_ndx(reconstructor_output, self.w),
                     "classifier_output": classifier_output,
-                    "ss_decoder_output": ss_decoder_output,
+                    "ss_decoder_output": output_to_ndx(ss_decoder_output, self.w),
                     "embedding": encoded_output,
                 }

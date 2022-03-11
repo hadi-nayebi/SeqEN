@@ -202,6 +202,6 @@ class AutoencoderSSDecoder(Autoencoder):
                 )
                 return {
                     "reconstructor_output": output_to_ndx(reconstructor_output, self.w),
-                    "ss_decoder_output": ss_decoder_output,
+                    "ss_decoder_output": output_to_ndx(ss_decoder_output, self.w),
                     "embedding": encoded_output,
                 }
