@@ -4,16 +4,15 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
-import pickle
-from datetime import datetime
 from os.path import dirname
 from pathlib import Path
 
+import openTSNE
 import plotly.express as px
 from numpy import array, sqrt, unique
-from pandas import concat
+from pandas import concat, read_pickle
 from plotly.offline import plot
-from sklearn.manifold import TSNE, Isomap
+from sklearn.manifold import TSNE
 
 from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import read_json
@@ -102,6 +101,30 @@ class TestSession:
             all_embeddings[f"tsne_{i}"] = x_embedded[:, i]
         return all_embeddings
 
+    def tsne_embeddings_2(self, dim=2):
+        # combine embeddings
+        all_embeddings = concat(
+            [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
+        )
+        all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
+        exaggeration = 4
+        data = array(all_embeddings["embedding"].values.tolist())
+        aff50 = openTSNE.affinity.PerplexityBasedNN(
+            data,
+            perplexity=50,
+            n_jobs=32,
+            random_state=0,
+        )
+        init = openTSNE.initialization.pca(data, random_state=0)
+        embedding_standard = openTSNE.TSNE(
+            exaggeration=exaggeration,
+            n_jobs=32,
+            verbose=True,
+        ).fit(affinities=aff50, initialization=init)
+        for i in range(dim):
+            all_embeddings[f"tsne_{i}"] = embedding_standard[:, i].tolist()
+        return all_embeddings
+
     def plot_embedding_2d(self, auto_open=False):
         # embeddings dir
         plots_dir = (
@@ -110,9 +133,19 @@ class TestSession:
         if not plots_dir.exists():
             plots_dir.mkdir()
         # now = datetime.now().strftime("%Y%m%d%H%M")
+        # embeddings dir
+        embeddings_dir = (
+            self.result_dir / f"tsne_{self.model_id}_{self.model.eval_data_loader_name}"
+        )
+        datafile = embeddings_dir / f"tsne_dim_2.pkl.bz2"
+        if not embeddings_dir.exists():
+            embeddings_dir.mkdir()
+            all_embeddings = self.tsne_embeddings_2(dim=2)
+            all_embeddings["size"] = all_embeddings["pred_class"] + self.MIN_SPOT_SIZE
+            all_embeddings.to_pickle(datafile)
+        else:
+            all_embeddings = read_pickle(datafile)
         # calculate embeddings and tsne to dim dimensions
-        all_embeddings = self.tsne_embeddings(dim=2)
-        all_embeddings["size"] = all_embeddings["pred_class"] + self.MIN_SPOT_SIZE
         num_samples = len(unique(all_embeddings["pr"]))
         fig = px.scatter(
             all_embeddings,
@@ -148,14 +181,24 @@ class TestSession:
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_act_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
-        # embeddings dir
-        embeddings_dir = (
-            self.result_dir / f"tsne_{self.model_id}_{self.model.eval_data_loader_name}"
+        fig = px.line(
+            all_embeddings,
+            x="tsne_0",
+            y="tsne_1",
+            color="pr",
+            hover_data=[
+                "w_seq",
+                "w_cons_seq",
+                "w_trg_class",
+                "pred_class",
+                "w_trg_ss",
+                "w_cons_ss",
+            ],
+            markers=True,
         )
-        if not embeddings_dir.exists():
-            embeddings_dir.mkdir()
-        datafile = embeddings_dir / f"tsne_dim_2.pkl.bz2"
-        all_embeddings.to_pickle(datafile)
+        html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}.html"
+        plot(fig, filename=str(html_filename), auto_open=auto_open)
+
         # python ./SeqEN2/sessions/test_session.py -n dummy -mv 202201222143_AAECSS_arch7 -mid 0 -dcl kegg_ndx_ACTp_100 -a arch7 -teb 100 -ge -tsne 2
 
 

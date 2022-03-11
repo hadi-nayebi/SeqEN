@@ -16,12 +16,12 @@ class TestTestSession(TestCase):
     """Test items for TestSession class"""
 
     test_session = TestSession()
-    DATASET_NAME = "pdb_act_clss_train"
+    DATASET_NAME = "single_act_clss_test"
     MODEL_NAME = "experiment0125"
     ARCH = "arch7"
     VERSION = "202201261847_AAECSS_arch7"
     MODEL_ID = 300
-    TEST_ITEMS = 10
+    TEST_ITEMS = -1
 
     @classmethod
     def setUpClass(cls) -> None:
