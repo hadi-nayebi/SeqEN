@@ -349,7 +349,7 @@ class Model:
             pr_df.attrs["pred_class"] = None
             pred_class = result.get("classifier_output", None)
             if pred_class is not None:
-                pr_df.attrs["pred_class"] = pred_class[:, 0].cpu()
+                pr_df["pred_class"] = pred_class[:, 0].cpu()
             # embedding
             pr_df["embedding"] = result["embedding"].tolist()
             yield pr_df
