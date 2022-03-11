@@ -10,5 +10,5 @@ models = {
 }
 for v, n, a in models["AECSS"]:
     system(
-        f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dclss single_act_clss_test -a {a} -teb -1 -ge"
+        f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dclss single_act_clss_test -a {a} -teb -1 -ge -tsne 2"
     )
