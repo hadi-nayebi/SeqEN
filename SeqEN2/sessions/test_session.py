@@ -4,6 +4,7 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
+from datetime import datetime
 from os.path import dirname
 from pathlib import Path
 
@@ -19,6 +20,10 @@ from SeqEN2.autoencoder.utils import Architecture
 from SeqEN2.model.data_loader import read_json
 from SeqEN2.model.model import Model
 from SeqEN2.utils.custom_arg_parser import TestSessionArgParser
+
+
+def now():
+    print(datetime.now().strftime("%Y%m%d%H%M%S"))
 
 
 class TestSession:
@@ -66,6 +71,8 @@ class TestSession:
         self.model.test(num_test_items=num_test_items)
 
     def get_embedding(self, num_test_items=-1, test_items=None):
+        print("embedding proteins ....")
+        now()
         self.result_dir = self.models_dir / self.model.name / "results" / self.version
         if not self.result_dir.exists():
             self.result_dir.mkdir()
@@ -83,9 +90,12 @@ class TestSession:
             self.embedding_results[item.attrs["name"]] = item
             datafile = embeddings_dir / f"{item.attrs['name']}.pkl.bz2"
             item.to_pickle(datafile)
+        now()
 
     def tsne_embeddings(self, dim=2):
         # combine embeddings
+        print("tsne Embeddings ...")
+        now()
         all_embeddings = concat(
             [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
         )
@@ -106,6 +116,8 @@ class TestSession:
 
     def tsne_embeddings_2(self, dim=2):
         # combine embeddings
+        print("tsne Embeddings ...")
+        now()
         all_embeddings = concat(
             [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
         )
@@ -135,7 +147,6 @@ class TestSession:
         )
         if not plots_dir.exists():
             plots_dir.mkdir()
-        # now = datetime.now().strftime("%Y%m%d%H%M")
         # embeddings dir
         embeddings_dir = (
             self.result_dir / f"tsne_{self.model_id}_{self.model.eval_data_loader_name}"
@@ -148,6 +159,8 @@ class TestSession:
             all_embeddings.to_pickle(datafile)
         else:
             all_embeddings = read_pickle(datafile)
+        print("tsne Done.")
+        now()
         # calculate embeddings and tsne to dim dimensions
         num_samples = len(unique(all_embeddings["pr"]))
         fig = px.scatter(
