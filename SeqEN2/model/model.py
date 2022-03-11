@@ -149,6 +149,7 @@ class Model:
             if "LR" in key:
                 wandb.log({f"{key}": mean(item)})
             else:
+                print(key)
                 wandb.log({key: wandb.Histogram(item)})
                 wandb.log({f"{key}_mean": mean(item)})
         self.autoencoder.reset_log()
