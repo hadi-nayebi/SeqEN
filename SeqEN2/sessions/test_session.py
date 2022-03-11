@@ -180,6 +180,7 @@ class TestSession:
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_pr_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
+        ####
         fig = px.scatter(
             all_embeddings,
             x="tsne_0",
@@ -197,23 +198,7 @@ class TestSession:
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_act_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
-        fig = px.scatter(
-            all_embeddings,
-            x="tsne_0",
-            y="tsne_1",
-            color="w_trg_class",
-            hover_data=[
-                "w_seq",
-                "w_cons_seq",
-                "w_trg_class",
-                "pred_class",
-                "w_trg_ss",
-                "w_cons_ss",
-            ],
-            size=self.MIN_SPOT_SIZE,
-        )
-        html_filename = plots_dir / f"tsne_dim_2_color_by_act_small_{num_samples}.html"
-        plot(fig, filename=str(html_filename), auto_open=auto_open)
+        ####
         fig = px.line(
             all_embeddings,
             x="tsne_0",
@@ -231,7 +216,25 @@ class TestSession:
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
-
+        #####
+        all_embeddings["size"] = self.MIN_SPOT_SIZE
+        fig = px.scatter(
+            all_embeddings,
+            x="tsne_0",
+            y="tsne_1",
+            color="w_trg_class",
+            hover_data=[
+                "w_seq",
+                "w_cons_seq",
+                "w_trg_class",
+                "pred_class",
+                "w_trg_ss",
+                "w_cons_ss",
+            ],
+            size="size",
+        )
+        html_filename = plots_dir / f"tsne_dim_2_color_by_act_small_{num_samples}.html"
+        plot(fig, filename=str(html_filename), auto_open=auto_open)
         # python ./SeqEN2/sessions/test_session.py -n dummy -mv 202201222143_AAECSS_arch7 -mid 0 -dcl kegg_ndx_ACTp_100 -a arch7 -teb 100 -ge -tsne 2
         # python3 ../../../SeqEN2/sessions/test_session.py -n AECSS -mv 202203042153_AECSS_arch66 -mid 24 -dclss single_act_clss_test -a arch66
         # -teb -1 -ge
