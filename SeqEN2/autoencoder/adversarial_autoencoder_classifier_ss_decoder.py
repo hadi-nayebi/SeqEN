@@ -67,7 +67,7 @@ class AdversarialAutoencoderClassifierSSDecoder(
             if "S" in input_keys:
                 self.train_ss_decoder(one_hot_input, target_vals_ss)
             if "C" in input_keys:
-                self.test_classifier(one_hot_input, target_vals_cl)
+                self.train_classifier(one_hot_input, target_vals_cl)
 
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
