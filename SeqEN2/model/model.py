@@ -47,6 +47,7 @@ class Model:
         self.name = name
         self.path = self.root / "models" / f"{self.name}"
         self.versions_path = self.path / "versions"
+        self.results = self.path / "results"
         self.d1 = d1
         self.dn = dn
         self.w = w
@@ -67,6 +68,7 @@ class Model:
         if not self.path.exists():
             self.path.mkdir()
             self.versions_path.mkdir()
+            self.results.mkdir()
         self.random_seed = 0
         self.eval_only = False
         self.embed_only = False
