@@ -197,6 +197,23 @@ class TestSession:
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_act_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
+        fig = px.scatter(
+            all_embeddings,
+            x="tsne_0",
+            y="tsne_1",
+            color="w_trg_class",
+            hover_data=[
+                "w_seq",
+                "w_cons_seq",
+                "w_trg_class",
+                "pred_class",
+                "w_trg_ss",
+                "w_cons_ss",
+            ],
+            size=self.MIN_SPOT_SIZE,
+        )
+        html_filename = plots_dir / f"tsne_dim_2_color_by_act_small_{num_samples}.html"
+        plot(fig, filename=str(html_filename), auto_open=auto_open)
         fig = px.line(
             all_embeddings,
             x="tsne_0",
