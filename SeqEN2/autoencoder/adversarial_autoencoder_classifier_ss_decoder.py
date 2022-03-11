@@ -105,7 +105,7 @@ class AdversarialAutoencoderClassifierSSDecoder(
                 encoded_output,
             ) = self.forward_test(one_hot_input)
             self.test_reconstructor(reconstructor_output, input_ndx, device)
-            self.train_discriminator(one_hot_input, device)
+            self.test_discriminator(one_hot_input, device)
             # test for continuity
             self.test_continuity(encoded_output)
             if "C" in input_keys:
