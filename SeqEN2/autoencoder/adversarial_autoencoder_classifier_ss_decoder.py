@@ -55,7 +55,7 @@ class AdversarialAutoencoderClassifierSSDecoder(
         ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
         return devectorized, discriminator_output, classifier_output, ss_decoder_output, encoded
 
-    def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A--"):
+    def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="ASC"):
         if input_vals is not None:
             input_ndx, target_vals_ss, target_vals_cl, one_hot_input = self.transform_input(
                 input_vals, device, input_noise=input_noise, input_keys=input_keys
@@ -89,10 +89,10 @@ class AdversarialAutoencoderClassifierSSDecoder(
             )
         if "clss" in input_vals.keys():
             self.train_one_batch(
-                input_vals["clss"], input_noise=input_noise, device=device, input_keys="ACS"
+                input_vals["clss"], input_noise=input_noise, device=device, input_keys="ASC"
             )
 
-    def test_one_batch(self, input_vals, device, input_keys="A--"):
+    def test_one_batch(self, input_vals, device, input_keys="ASC"):
         if input_vals is not None:
             input_ndx, target_vals_ss, target_vals_cl, one_hot_input = self.transform_input(
                 input_vals, device, input_keys=input_keys
@@ -127,7 +127,7 @@ class AdversarialAutoencoderClassifierSSDecoder(
             if "ss" in input_vals.keys():
                 self.test_one_batch(input_vals["ss"], device, input_keys="AS")
             if "clss" in input_vals.keys():
-                self.test_one_batch(input_vals["clss"], device, input_keys="ACS")
+                self.test_one_batch(input_vals["clss"], device, input_keys="ASC")
 
     @staticmethod
     def assert_input_type(input_vals):
