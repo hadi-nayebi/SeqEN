@@ -126,7 +126,7 @@ class TestSession:
         data = array(all_embeddings["embedding"].values.tolist())
         aff50 = openTSNE.affinity.PerplexityBasedNN(
             data,
-            perplexity=50,
+            perplexity=100,
             n_jobs=32,
             random_state=0,
         )
