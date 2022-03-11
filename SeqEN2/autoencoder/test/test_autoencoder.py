@@ -94,6 +94,11 @@ class TestAutoencoder(TestCase):
         self.autoencoder.train_batch(input_vals, self.device)
         # TODO: define a useful assert
 
+    def test_test_batch(self):
+        input_vals = {"clss": self.train_batch}
+        self.autoencoder.test_batch(input_vals, self.device)
+        # TODO: define a useful assert
+
     def test_initialize_for_training(self):
         self.autoencoder.training_settings = AETrainingSettings(
             reconstructor=TrainingParams(lr=0.5)
