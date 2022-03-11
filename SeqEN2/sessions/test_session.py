@@ -217,7 +217,6 @@ class TestSession:
         html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         #####
-        all_embeddings["size"] = 0.01
         fig = px.scatter(
             all_embeddings,
             x="tsne_0",
@@ -231,7 +230,10 @@ class TestSession:
                 "w_trg_ss",
                 "w_cons_ss",
             ],
-            size="size",
+        )
+        fig.update_traces(
+            marker=dict(size=1, line=dict(width=2, color="DarkSlateGrey")),
+            selector=dict(mode="markers"),
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_act_small_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
