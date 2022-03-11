@@ -106,7 +106,7 @@ class AdversarialAutoencoderSSDecoder(AdversarialAutoencoder, AutoencoderSSDecod
             # test for continuity
             self.test_continuity(encoded_output)
             if "S" in input_keys:
-                self.train_ss_decoder(one_hot_input, target_vals_ss)
+                self.test_ss_decoder(one_hot_input, target_vals_ss, device)
 
     def test_batch(self, input_vals, device):
         """
