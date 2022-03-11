@@ -175,6 +175,7 @@ class TestSession:
                 "pred_class",
                 "w_trg_ss",
                 "w_cons_ss",
+                "pr",
             ],
             size="size",
         )
@@ -193,6 +194,7 @@ class TestSession:
                 "pred_class",
                 "w_trg_ss",
                 "w_cons_ss",
+                "pr",
             ],
             size="size",
         )
@@ -211,6 +213,7 @@ class TestSession:
                 "pred_class",
                 "w_trg_ss",
                 "w_cons_ss",
+                "pr",
             ],
             markers=True,
         )
@@ -229,6 +232,7 @@ class TestSession:
                 "pred_class",
                 "w_trg_ss",
                 "w_cons_ss",
+                "pr",
             ],
         )
         fig.update_traces(
