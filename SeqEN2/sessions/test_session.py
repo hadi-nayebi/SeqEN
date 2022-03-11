@@ -217,7 +217,7 @@ class TestSession:
         html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         #####
-        all_embeddings["size"] = self.MIN_SPOT_SIZE
+        all_embeddings["size"] = 0.01
         fig = px.scatter(
             all_embeddings,
             x="tsne_0",
