@@ -327,7 +327,7 @@ class Model:
             pr_df["w_cons_seq"] = None
             w_seq_out = result.get("reconstructor_output", None)
             if w_seq_out is not None:
-                cons_seq = get_consensus_seq(w_seq_out, device)
+                cons_seq = get_consensus_seq(w_seq_out, self.device)
                 pr_df.attrs["cons_seq"] = ndx_to_seq(cons_seq, self.autoencoder.aa_keys)
                 pr_df["w_seq_out"] = w_seq_out.tolist()
                 pr_df["w_cons_seq"] = sliding_window(
@@ -339,7 +339,7 @@ class Model:
             pr_df["w_cons_ss"] = None
             w_ss_out = result.get("ss_decoder_output", None)
             if w_ss_out is not None:
-                cons_ss = get_consensus_seq(w_ss_out, device)
+                cons_ss = get_consensus_seq(w_ss_out, self.device)
                 pr_df.attrs["cons_ss"] = ndx_to_seq(cons_ss, self.autoencoder.ss_keys)
                 pr_df["w_ss_out"] = w_ss_out.tolist()
                 pr_df["w_cons_ss"] = sliding_window(
