@@ -41,6 +41,10 @@ class TestSession:
         self.version = None
         self.model_id = None
         self.embedding_results = {}
+        # run dir
+        self.result_dir = None
+        # attrs
+        self.smooth_embed = False
 
     def add_model(self, name, arch, version, model_id, d1=8, dn=10, w=20):
         arch = self.load_arch(arch)
@@ -62,49 +66,21 @@ class TestSession:
         self.model.test(num_test_items=num_test_items)
 
     def get_embedding(self, num_test_items=-1, test_items=None):
+        self.result_dir = self.models_dir / self.model.name / "results" / self.version
+        if not self.result_dir.exists():
+            self.result_dir.mkdir()
+        # embeddings dir
+        embeddings_dir = (
+            self.result_dir / f"embeddings_only_{self.model_id}_{self.model.eval_data_loader_name}"
+        )
+        if not embeddings_dir.exists():
+            embeddings_dir.mkdir()
+        # getting embeddings
         self.embedding_results = {}
-        if self.model.data_loader_cl is not None:
-            for item in self.model.get_embedding(
-                num_test_items=num_test_items, test_items=test_items, dataset="cl"
-            ):
-                self.embedding_results[item.attrs["name"]] = item
-        if self.model.data_loader_clss is not None:
-            for item in self.model.get_embedding(
-                num_test_items=num_test_items, test_items=test_items, dataset="clss"
-            ):
-                self.embedding_results[item.attrs["name"]] = item
-
-        filename = (
-            self.models_dir
-            / self.model.name
-            / "versions"
-            / self.version
-            / f"embeddings_only_{self.model_id}"
-        )
-        if not filename.exists():
-            filename.mkdir()
-        datafile = filename / f"embeddings.pkl.bz2"
-        with open(datafile, "wb") as f:
-            pickle.dump(self.embedding_results, f)
-
-    def get_embedding_all(self):
-        data_dir = (
-            self.models_dir
-            / self.model.name
-            / "versions"
-            / self.version
-            / f"all_embeddings_only_{self.model_id}"
-        )
-        if not data_dir.exists():
-            data_dir.mkdir()
-        if self.model.data_loader_cl is not None:
-            for item in self.model.get_embedding_all(dataset="cl"):
-                datafile = data_dir / f"embeddings_{item.attrs['name']}.pkl.bz2"
-                item.to_pickle(datafile)
-        if self.model.data_loader_clss is not None:
-            for item in self.model.get_embedding_all(dataset="clss"):
-                datafile = data_dir / f"embeddings_{item.attrs['name']}.pkl.bz2"
-                item.to_pickle(datafile)
+        for item in self.model.get_embedding(num_test_items=num_test_items, test_items=test_items):
+            self.embedding_results[item.attrs["name"]] = item
+            datafile = embeddings_dir / f"{item.attrs['name']}.pkl.bz2"
+            item.to_pickle(datafile)
 
     def tsne_embeddings(self, dim=2):
         # combine embeddings
@@ -118,7 +94,7 @@ class TestSession:
             learning_rate="auto",
             init="pca",
             perplexity=perplexity,
-            n_iter=10000,
+            n_iter=1000,
             n_jobs=-1,
         )
         x_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
@@ -126,161 +102,60 @@ class TestSession:
             all_embeddings[f"tsne_{i}"] = x_embedded[:, i]
         return all_embeddings
 
-    def isomap_embeddings(self, dim=2):
-        # combine embeddings
-        all_embeddings = concat(
-            [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
+    def plot_embedding_2d(self, auto_open=False):
+        # embeddings dir
+        plots_dir = (
+            self.result_dir / f"embeddings_plots_{self.model_id}_{self.model.eval_data_loader_name}"
         )
-        all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
-        n_neighbors = int(sqrt(len(all_embeddings["uid"])))
-        model = Isomap(n_components=dim, n_neighbors=n_neighbors, n_jobs=-1)
-        x_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
-        for i in range(dim):
-            all_embeddings[f"isomap_{i}"] = x_embedded[:, i]
-        return all_embeddings
-
-    def plot_embedding_2d(self, method="tsne"):
-        t1 = datetime.now()
-        filename = (
-            self.models_dir
-            / self.model.name
-            / "versions"
-            / self.version
-            / f"embeddings_results_{self.model_id}"
-        )
-        now = datetime.now().strftime("%Y%m%d%H%M")
-        if not filename.exists():
-            filename.mkdir()
+        if not plots_dir.exists():
+            plots_dir.mkdir()
+        # now = datetime.now().strftime("%Y%m%d%H%M")
         # calculate embeddings and tsne to dim dimensions
-        if method == "tsne":
-            all_embeddings = self.tsne_embeddings(dim=2)
-            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
-            num_samples = len(unique(all_embeddings["pr"]))
-            fig = px.scatter(
-                all_embeddings,
-                x="tsne_0",
-                y="tsne_1",
-                color="pr",
-                hover_data=["act_trg", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_tsne_dim_{2}_color_by_pr_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            fig = px.scatter(
-                all_embeddings,
-                x="tsne_0",
-                y="tsne_1",
-                color="act_trg",
-                hover_data=["pr", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_tsne_dim_{2}_color_by_act_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            datafile = filename / f"{now}_tsne_dim_{2}.pkl.bz2"
-            all_embeddings.to_pickle(datafile)
-        elif method == "isomap":
-            all_embeddings = self.isomap_embeddings(dim=2)
-            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
-            num_samples = len(unique(all_embeddings["pr"]))
-            fig = px.scatter(
-                all_embeddings,
-                x="isomap_0",
-                y="isomap_1",
-                color="pr",
-                hover_data=["act_trg", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_isomap_dim_{2}_color_by_pr_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            fig = px.scatter(
-                all_embeddings,
-                x="isomap_0",
-                y="isomap_1",
-                color="act_trg",
-                hover_data=["pr", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_isomap_dim_{2}_color_by_act_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            datafile = filename / f"{now}_isomap_dim_{2}.pkl.bz2"
-            all_embeddings.to_pickle(datafile)
-        print(datetime.now() - t1)
-
-    def plot_embedding_3d(self, method="tsne"):
-        t1 = datetime.now()
-        filename = (
-            self.models_dir
-            / self.model.name
-            / "versions"
-            / self.version
-            / f"embeddings_results_{self.model_id}"
+        all_embeddings = self.tsne_embeddings(dim=2)
+        all_embeddings["size"] = all_embeddings["pred_class"] + self.MIN_SPOT_SIZE
+        num_samples = len(unique(all_embeddings["pr"]))
+        fig = px.scatter(
+            all_embeddings,
+            x="tsne_0",
+            y="tsne_1",
+            color="pr",
+            hover_data=[
+                "w_seq",
+                "w_cons_seq",
+                "w_trg_class",
+                "pred_class",
+                "w_trg_ss",
+                "w_cons_ss",
+            ],
+            size="size",
         )
-        now = datetime.now().strftime("%Y%m%d%H%M")
-        if not filename.exists():
-            filename.mkdir()
-        # calculate embeddings and tsne to dim dimensions
-        if method == "tsne":
-            all_embeddings = self.tsne_embeddings(dim=3)
-            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
-            num_samples = len(unique(all_embeddings["pr"]))
-            fig = px.scatter_3d(
-                all_embeddings,
-                x="tsne_0",
-                y="tsne_1",
-                z="tsne_2",
-                color="pr",
-                hover_data=["act_trg", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_tsne_dim_{3}_color_by_pr_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            fig = px.scatter_3d(
-                all_embeddings,
-                x="tsne_0",
-                y="tsne_1",
-                z="tsne_2",
-                color="act_trg",
-                hover_data=["pr", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_tsne_dim_{3}_color_by_act_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            datafile = filename / f"{now}_tsne_dim_{3}.pkl.bz2"
-            all_embeddings.to_pickle(datafile)
-            print(datetime.now() - t1)
-            t1 = datetime.now()
-
-        elif method == "isomap":
-            all_embeddings = self.isomap_embeddings(dim=3)
-            all_embeddings["size"] = all_embeddings["act_pred"] + self.MIN_SPOT_SIZE
-            num_samples = len(unique(all_embeddings["pr"]))
-            fig = px.scatter_3d(
-                all_embeddings,
-                x="isomap_0",
-                y="isomap_1",
-                z="isomap_2",
-                color="pr",
-                hover_data=["act_trg", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_isomap_dim_{3}_color_by_pr_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            fig = px.scatter_3d(
-                all_embeddings,
-                x="isomap_0",
-                y="isomap_1",
-                z="isomap_2",
-                color="act_trg",
-                hover_data=["pr", "act_pred", "slices"],
-                size="size",
-            )
-            html_filename = filename / f"{now}_isomap_dim_{3}_color_by_act_{num_samples}.html"
-            plot(fig, filename=str(html_filename), auto_open=False)
-            datafile = filename / f"{now}_isomap_dim_{3}.pkl.bz2"
-            all_embeddings.to_pickle(datafile)
-            print(datetime.now() - t1)
-            t1 = datetime.now()
-        print(datetime.now() - t1)
+        html_filename = plots_dir / f"tsne_dim_2_color_by_pr_{num_samples}.html"
+        plot(fig, filename=str(html_filename), auto_open=auto_open)
+        fig = px.scatter(
+            all_embeddings,
+            x="tsne_0",
+            y="tsne_1",
+            color="w_trg_class",
+            hover_data=[
+                "w_seq",
+                "w_cons_seq",
+                "w_trg_class",
+                "pred_class",
+                "w_trg_ss",
+                "w_cons_ss",
+            ],
+            size="size",
+        )
+        html_filename = plots_dir / f"tsne_dim_2_color_by_act_{num_samples}.html"
+        plot(fig, filename=str(html_filename), auto_open=auto_open)
+        # embeddings dir
+        embeddings_dir = (
+            self.result_dir / f"tsne_{self.model_id}_{self.model.eval_data_loader_name}"
+        )
+        if not embeddings_dir.exists():
+            embeddings_dir.mkdir()
+        datafile = embeddings_dir / f"tsne_dim_2.pkl.bz2"
+        all_embeddings.to_pickle(datafile)
         # python ./SeqEN2/sessions/test_session.py -n dummy -mv 202201222143_AAECSS_arch7 -mid 0 -dcl kegg_ndx_ACTp_100 -a arch7 -teb 100 -ge -tsne 2
 
 
@@ -296,30 +171,22 @@ def main(args):
         dn=args["Dn"],
         w=args["W"],
     )
+    test_session.model.embed_only = args["Embed Only"]
+    test_session.smooth_embed = args["Smooth Embed"]
     # load datafiles
     if args["Dataset_cl"] != "":
         test_session.load_data("cl", args["Dataset_cl"])
-    if args["Dataset_ss"] != "":
+    elif args["Dataset_ss"] != "":
         test_session.load_data("ss", args["Dataset_ss"])
-    if args["Dataset_clss"] != "":
+    elif args["Dataset_clss"] != "":
         test_session.load_data("clss", args["Dataset_clss"])
     # tests
     # embeddings
     if args["Get Embedding"]:
-        if args["Get All Embedding"]:
-            test_session.get_embedding_all()
-        else:
-            test_session.get_embedding(num_test_items=args["Test Batch"])
+        test_session.get_embedding(num_test_items=args["Test Batch"])
         if args["tSNE dim"]:
             if args["tSNE dim"] == 2:
-                test_session.plot_embedding_2d(method="tsne")
-            elif args["tSNE dim"] == 3:
-                test_session.plot_embedding_3d(method="tsne")
-        if args["Isomap dim"]:
-            if args["Isomap dim"] == 2:
-                test_session.plot_embedding_2d(method="isomap")
-            elif args["Isomap dim"] == 3:
-                test_session.plot_embedding_3d(method="isomap")
+                test_session.plot_embedding_2d()
 
 
 if __name__ == "__main__":
