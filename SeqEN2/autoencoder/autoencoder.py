@@ -6,21 +6,28 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from numpy.random import choice
-from torch import Tensor, argmax, cat
+from torch import Tensor
 from torch import load as torch_load
-from torch import no_grad, optim, randperm
+from torch import no_grad, optim
 from torch import save as torch_save
-from torch import sum as torch_sum
-from torch import tensor, transpose
+from torch import transpose
 from torch.nn import Module, MSELoss, NLLLoss
-from torch.nn.functional import one_hot, unfold
+from torch.nn.functional import one_hot
 from torch.nn.utils import clip_grad_value_
 
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.model.data_loader import read_json, write_json
 from SeqEN2.utils.custom_dataclasses import AETrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
+from SeqEN2.utils.seq_tools import (
+    add_noise,
+    consensus_acc,
+    continuity_target_left,
+    continuity_target_right,
+    output_to_ndx,
+    reconstructor_acc,
+    slide_window,
+    split_input_vals,
+)
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -176,36 +183,13 @@ class Autoencoder(Module):
         # input_keys = "A--" : sequence, "AC-" sequence:class, "AS-" sequence:ss, "ACS" seq:class:ss, "
         # scans by sliding window of w
         assert isinstance(input_vals, Tensor), f"expected Tensor type, received {type(input_vals)}"
-        kernel_size = (input_vals.shape[1], self.w)
-        input_vals = unfold(input_vals.float().T[None, None, :, :], kernel_size=kernel_size)[0].T
+        input_vals = slide_window(input_vals, self.w)
         input_ndx = input_vals[:, : self.w].long()
-        target_vals_ss = None
-        target_vals_cl = None
-        if len(input_keys) == 2:
-            if input_keys[1] == "S":
-                target_vals_ss = input_vals[:, self.w :].long()
-            elif input_keys[1] == "C":
-                target_vals_cl = input_vals[:, self.w :].mean(axis=1).reshape((-1, 1))
-                target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
-        elif len(input_keys) == 3:
-            if input_keys[1] == "S":
-                target_vals_ss = input_vals[:, self.w : -self.w].long()
-            elif input_keys[2] == "S":
-                target_vals_ss = input_vals[:, -self.w :].long()
-            if input_keys[1] == "C":
-                target_vals_cl = input_vals[:, self.w : -self.w].mean(axis=1).reshape((-1, 1))
-                target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
-            elif input_keys[2] == "C":
-                target_vals_cl = input_vals[:, -self.w :].mean(axis=1).reshape((-1, 1))
-                target_vals_cl = cat((target_vals_cl, 1 - target_vals_cl), 1).float()
+        target_vals_ss, target_vals_cl = split_input_vals(input_vals, input_keys, self.w)
         # one-hot vec input
         one_hot_input = one_hot(input_ndx, num_classes=self.d0) * 1.0
         if input_noise > 0.0:
-            ndx = randperm(self.w)
-            size = list(one_hot_input.shape)
-            size[-1] = 1
-            p = tensor(choice([1, 0], p=[input_noise, 1 - input_noise], size=size)).to(device)
-            one_hot_input = (one_hot_input[:, ndx, :] * p) + (one_hot_input * (1 - p))
+            one_hot_input = add_noise(one_hot_input, input_noise, device)
         return input_ndx, target_vals_ss, target_vals_cl, one_hot_input
 
     def log(self, key, value):
@@ -247,10 +231,10 @@ class Autoencoder(Module):
             self.continuity_optimizer.zero_grad()
             encoded_output = self.forward_embed(one_hot_input)
             continuity_loss_r = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+                encoded_output, continuity_target_right(encoded_output)
             )
             continuity_loss_l = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                encoded_output, continuity_target_left(encoded_output)
             )
             continuity_loss = continuity_loss_r + continuity_loss_l
             continuity_loss.backward()
@@ -296,13 +280,8 @@ class Autoencoder(Module):
     def test_reconstructor(self, reconstructor_output, input_ndx, device):
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
         # reconstructor acc
-        reconstructor_ndx = argmax(reconstructor_output, dim=1)
-        reconstructor_accuracy = (
-            torch_sum(reconstructor_ndx == input_ndx.reshape((-1,))) / reconstructor_ndx.shape[0]
-        )
-        consensus_seq_acc, _ = consensus_acc(
-            input_ndx, reconstructor_ndx.reshape((-1, self.w)), device
-        )
+        reconstructor_accuracy = reconstructor_acc(reconstructor_output, input_ndx)
+        consensus_seq_acc, _ = consensus_acc(input_ndx, reconstructor_output, self.w, device)
         # reconstruction_loss, discriminator_loss, classifier_loss
         self.log("test_reconstructor_loss", reconstructor_loss.item())
         self.log("test_reconstructor_accuracy", reconstructor_accuracy.item())
@@ -311,10 +290,10 @@ class Autoencoder(Module):
     def test_continuity(self, encoded_output):
         if not self.ignore_continuity:
             continuity_loss_r = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[1:], encoded_output[-1].unsqueeze(0)), 0)
+                encoded_output, continuity_target_right(encoded_output)
             )
             continuity_loss_l = self.criterion_MSELoss(
-                encoded_output, cat((encoded_output[0].unsqueeze(0), encoded_output[:-1]), 0)
+                encoded_output, continuity_target_left(encoded_output)
             )
             continuity_loss = continuity_loss_r + continuity_loss_l
             self.log("test_continuity_loss", continuity_loss.item())
@@ -358,7 +337,7 @@ class Autoencoder(Module):
             else:
                 reconstructor_output, encoded_output = self.forward_test(one_hot_input)
                 return {
-                    "reconstructor_output": reconstructor_output,
+                    "reconstructor_output": output_to_ndx(reconstructor_output, self.w),
                     "embedding": encoded_output,
                 }
 

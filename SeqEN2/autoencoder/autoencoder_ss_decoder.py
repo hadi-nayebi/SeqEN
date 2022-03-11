@@ -6,18 +6,16 @@ __version__ = "0.0.1"
 
 from typing import Dict
 
-from torch import argmax
 from torch import load as torch_load
 from torch import no_grad, optim
 from torch import save as torch_save
-from torch import sum as torch_sum
 from torch import transpose
 from torch.nn.utils import clip_grad_value_
 
 from SeqEN2.autoencoder.autoencoder import Autoencoder
 from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
 from SeqEN2.utils.custom_dataclasses import AESSTrainingSettings
-from SeqEN2.utils.seq_tools import consensus_acc
+from SeqEN2.utils.seq_tools import consensus_acc, output_to_ndx, reconstructor_acc
 from SeqEN2.utils.utils import get_map_location
 
 
@@ -156,13 +154,8 @@ class AutoencoderSSDecoder(Autoencoder):
     def test_ss_decoder(self, ss_decoder_output, target_vals_ss, device):
         ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals_ss.reshape((-1,)))
         # ss_decoder acc
-        ss_decoder_ndx = argmax(ss_decoder_output, dim=1)
-        ss_decoder_accuracy = (
-            torch_sum(ss_decoder_ndx == target_vals_ss.reshape((-1,))) / ss_decoder_ndx.shape[0]
-        )
-        consensus_ss_acc, _ = consensus_acc(
-            target_vals_ss, ss_decoder_ndx.reshape((-1, self.w)), device
-        )
+        ss_decoder_accuracy = reconstructor_acc(ss_decoder_output, target_vals_ss)
+        consensus_ss_acc, _ = consensus_acc(target_vals_ss, ss_decoder_output, self.w, device)
         self.log("test_ss_decoder_loss", ss_decoder_loss.item())
         self.log("test_ss_decoder_accuracy", ss_decoder_accuracy.item())
         self.log("test_consensus_ss_accuracy", consensus_ss_acc)
@@ -208,7 +201,7 @@ class AutoencoderSSDecoder(Autoencoder):
                     one_hot_input
                 )
                 return {
-                    "reconstructor_output": reconstructor_output,
+                    "reconstructor_output": output_to_ndx(reconstructor_output, self.w),
                     "ss_decoder_output": ss_decoder_output,
                     "embedding": encoded_output,
                 }
