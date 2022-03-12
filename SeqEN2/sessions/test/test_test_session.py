@@ -21,7 +21,7 @@ class TestTestSession(TestCase):
     ARCH = "arch7"
     VERSION = "202201261847_AAECSS_arch7"
     MODEL_ID = 300
-    TEST_ITEMS = -1
+    TEST_ITEMS = 10
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -46,13 +46,13 @@ class TestTestSession(TestCase):
         one_embedding = list(self.test_session.embedding_results.values())[0]
         self.assertIsInstance(self.test_session.embedding_results, Dict)
         self.assertIsInstance(one_embedding, DataFrame)
-        # print(one_embedding.attrs)
-        # print(one_embedding.columns)
-        # print(one_embedding)
+        print(one_embedding.attrs)
+        print(one_embedding.columns)
+        print(one_embedding["embedding"][0])
 
     def test_tsne_embeddings(self):
-        # pass
-        self.test_session.plot_embedding_2d(auto_open=True)
+        pass
+        # self.test_session.plot_embedding_2d(auto_open=True)
         # opens two html files
 
 
