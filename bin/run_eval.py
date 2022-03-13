@@ -10,7 +10,7 @@ models = {
 }
 for v, n, a in models["AECSS"]:
     system(
-        f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dclss single_act_clss_test -a {a} -teb -1 -tsne 2"
+        f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dclss single_act_clss_test -a {a} -teb -1 -ge -tsne 2"
     )
     # system(
     #     f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dcl kegg_ndx_ACTp_test -a {a} -teb 1000 -ge -tsne 2"
