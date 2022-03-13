@@ -218,6 +218,7 @@ class TestSession:
                 "pr",
             ],
             markers=True,
+            line_shape="spline",
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
