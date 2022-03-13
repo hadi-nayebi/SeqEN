@@ -154,6 +154,8 @@ class TestSession:
         datafile = embeddings_dir / f"tsne_dim_2.pkl.bz2"
         if not embeddings_dir.exists():
             embeddings_dir.mkdir()
+
+        if not datafile.exists():
             all_embeddings = self.tsne_embeddings_2(dim=2)
             all_embeddings["size"] = all_embeddings["pred_class"] + self.MIN_SPOT_SIZE
             all_embeddings.to_pickle(datafile)
