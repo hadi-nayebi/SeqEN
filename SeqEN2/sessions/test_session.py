@@ -122,7 +122,7 @@ class TestSession:
             [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
         )
         all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
-        exaggeration = 4
+        exaggeration = 1
         data = array(all_embeddings["embedding"].values.tolist())
         aff50 = openTSNE.affinity.PerplexityBasedNN(
             data,
