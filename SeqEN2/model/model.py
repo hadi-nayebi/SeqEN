@@ -360,9 +360,9 @@ class Model:
             # embedding
             pr_df["embedding"] = result["embedding"].tolist()
             # adding uid to embedding
-            _ = pr_df.apply(
-                lambda row: row.embedding.append(row.unique_id / result["embedding"].shape[0]),
-                axis=1,
-            )
+            # _ = pr_df.apply(
+            #     lambda row: row.embedding.append(row.unique_id / result["embedding"].shape[0]),
+            #     axis=1,
+            # )
 
             yield pr_df

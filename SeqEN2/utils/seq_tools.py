@@ -91,7 +91,8 @@ def sliding_window(input_vals, w, keys=None):
 
 
 def ndx_to_seq(seq, keys):
-    assert isinstance(seq, Tensor)
+    if not isinstance(seq, Tensor):
+        seq = tensor(seq)
     return "".join([keys[i] for i in seq.long()])
 
 

@@ -26,6 +26,9 @@ def now():
     print(datetime.now().strftime("%Y%m%d%H%M%S"))
 
 
+EXCEPTIONS = ["AF-A0A1D8PLB7-F1-model_v1_1", "AF-O60086-F1-model_v1_1"]
+
+
 class TestSession:
     root = Path(dirname(__file__)).parent.parent
     MIN_SPOT_SIZE = 0.05
@@ -87,6 +90,8 @@ class TestSession:
         for item in tqdm(
             self.model.get_embedding(num_test_items=num_test_items, test_items=test_items)
         ):
+            if item.attrs["name"] in EXCEPTIONS:
+                continue
             self.embedding_results[item.attrs["name"]] = item
             datafile = embeddings_dir / f"{item.attrs['name']}.pkl.bz2"
             item.to_pickle(datafile)

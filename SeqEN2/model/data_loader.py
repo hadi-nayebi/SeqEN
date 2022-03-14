@@ -33,6 +33,18 @@ def read_fasta(filename) -> dict:
     return data_dict
 
 
+def write_fasta(data, filename) -> None:
+    """Write fasta files from dict."""
+    with open(filename, "w") as file:
+        for key, item in data.items():
+            file.write(f">{key}\n")
+            seq = item[:]
+            while len(seq) > 60:
+                file.write(f"{seq[:60]}\n")
+                seq = seq[60:]
+            file.write(f"{seq}\n")
+
+
 def read_json(filename) -> dict:
     """Read json files and return a dict. (.json, .json.gz)"""
     if isinstance(filename, Path):
