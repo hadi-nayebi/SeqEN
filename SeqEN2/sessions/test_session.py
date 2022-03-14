@@ -61,6 +61,9 @@ class TestSession:
         if self.model is None:
             self.model = Model(name, arch, d1=d1, dn=dn, w=w)
             self.model.load_model(version, model_id)
+        self.result_dir = self.models_dir / self.model.name / "results" / self.version
+        if not self.result_dir.exists():
+            self.result_dir.mkdir()
 
     def load_data(self, key, dataset_name):
         self.model.eval_only = True
@@ -76,9 +79,6 @@ class TestSession:
     def get_embedding(self, num_test_items=-1, test_items=None):
         print("embedding proteins ....")
         now()
-        self.result_dir = self.models_dir / self.model.name / "results" / self.version
-        if not self.result_dir.exists():
-            self.result_dir.mkdir()
         # embeddings dir
         embeddings_dir = (
             self.result_dir / f"embeddings_only_{self.model_id}_{self.model.eval_data_loader_name}"
