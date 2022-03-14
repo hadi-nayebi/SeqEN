@@ -223,6 +223,7 @@ class TestSession:
                 "pr",
             ],
             markers=True,
+            render_mode="svg",
             line_shape="spline",
         )
         html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}.html"
