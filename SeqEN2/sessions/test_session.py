@@ -145,7 +145,9 @@ class TestSession:
             all_embeddings[f"tsne_{i}"] = embedding_standard[:, i].tolist()
         return all_embeddings
 
-    def plot_embedding_2d(self, auto_open=False):
+    def plot_embedding_2d(self, auto_open=False, pr_ids=None, text=""):
+        if pr_ids is None:
+            pr_ids = []
         # embeddings dir
         plots_dir = (
             self.result_dir / f"embeddings_plots_{self.model_id}_{self.model.eval_data_loader_name}"
@@ -166,7 +168,12 @@ class TestSession:
             all_embeddings.to_pickle(datafile)
         else:
             all_embeddings = read_pickle(datafile)
+            if len(pr_ids) > 0:
+                pattern = "|".join(pr_ids)
+                mask = all_embeddings["pr"].str.contains(pattern, case=False, na=False)
+                all_embeddings = all_embeddings[mask]
         print("tsne Done.")
+        text = f"_{text}" if text != "" else ""
         now()
         # calculate embeddings and tsne to dim dimensions
         num_samples = len(unique(all_embeddings["pr"]))
@@ -186,7 +193,7 @@ class TestSession:
             ],
             size="size",
         )
-        html_filename = plots_dir / f"tsne_dim_2_color_by_pr_{num_samples}.html"
+        html_filename = plots_dir / f"tsne_dim_2_color_by_pr_{num_samples}{text}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         ####
         fig = px.scatter(
@@ -205,7 +212,7 @@ class TestSession:
             ],
             size="size",
         )
-        html_filename = plots_dir / f"tsne_dim_2_color_by_act_{num_samples}.html"
+        html_filename = plots_dir / f"tsne_dim_2_color_by_act_{num_samples}{text}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         ####
         fig = px.line(
@@ -226,7 +233,7 @@ class TestSession:
             render_mode="svg",
             line_shape="spline",
         )
-        html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}.html"
+        html_filename = plots_dir / f"tsne_dim_2_color_by_pr_lines_{num_samples}{text}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         #####
         fig = px.scatter(
@@ -248,7 +255,7 @@ class TestSession:
             marker=dict(size=1, line=dict(width=2, color="DarkSlateGrey")),
             selector=dict(mode="markers"),
         )
-        html_filename = plots_dir / f"tsne_dim_2_color_by_act_small_{num_samples}.html"
+        html_filename = plots_dir / f"tsne_dim_2_color_by_act_small_{num_samples}{text}.html"
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         # python ./SeqEN2/sessions/test_session.py -n dummy -mv 202201222143_AAECSS_arch7 -mid 0 -dcl kegg_ndx_ACTp_100 -a arch7 -teb 100 -ge -tsne 2
         # python3 ../../../SeqEN2/sessions/test_session.py -n AECSS -mv 202203042153_AECSS_arch66 -mid 24 -dclss single_act_clss_test -a arch66
@@ -280,9 +287,11 @@ def main(args):
     # embeddings
     if args["Get Embedding"]:
         test_session.get_embedding(num_test_items=args["Test Batch"])
-        if args["tSNE dim"]:
-            if args["tSNE dim"] == 2:
-                test_session.plot_embedding_2d()
+    if args["tSNE dim"]:
+        if args["tSNE dim"] == 2:
+            pr_ids = args["Pr IDs"].split(",") if args["Pr IDs"] != "" else None
+            text = args["Text"]
+            test_session.plot_embedding_2d(pr_ids=pr_ids, text=text)
 
 
 if __name__ == "__main__":

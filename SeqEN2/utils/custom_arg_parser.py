@@ -135,3 +135,5 @@ class TestSessionArgParser(DefaultParser):
         self.parser.add_argument(
             "-se", "--smooth_embed", help="Smooth Embed", action="store_true", default=False
         )
+        self.parser.add_argument("-prids", "--protein_ids", type=str, help="Pr IDs")
+        self.parser.add_argument("-t", "--text", type=str, help="Text")
