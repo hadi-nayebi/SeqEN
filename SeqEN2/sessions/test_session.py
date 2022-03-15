@@ -125,7 +125,14 @@ class TestSession:
     def get_embeddings_from_df(self):
         return array(self.all_embeddings["embedding"].values.tolist())
 
-    def tsne_embeddings_from_init(self, init, aff50, split):
+    def tsne_embeddings_from_init(self, init, split):
+        aff50 = openTSNE.affinity.PerplexityBasedNN(
+            init,
+            perplexity=100,
+            n_jobs=32,
+            random_state=0,
+            verbose=True,
+        )
         embedding = openTSNE.TSNEEmbedding(
             init,
             aff50,
@@ -172,7 +179,7 @@ class TestSession:
             self.all_embeddings[f"tsne_{i}"] = embedding_standard[:, i].tolist()
 
         if return_embeddings:
-            return embedding_standard, aff50
+            return embedding_standard
         else:
             return None
 
