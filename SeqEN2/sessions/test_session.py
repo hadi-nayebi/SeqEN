@@ -188,8 +188,6 @@ class TestSession:
             self.result_dir / f"embeddings_only_{self.model_id}_{self.model.eval_data_loader_name}"
         )
         files = glob(f"{embeddings_dir}/*.pkl.bz2")
-        if len(files) > 200:
-            files = files[:200]
         self.all_embeddings = concat(
             [read_pickle(fp).assign(pr=fp.split(".")[0]) for fp in tqdm(files)], ignore_index=True
         )
