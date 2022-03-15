@@ -213,7 +213,7 @@ class TestSession:
             embeddings_dir.mkdir()
 
         if not datafile.exists():
-            if self.all_embeddings is not None:
+            if self.all_embeddings is None:
                 self.tsne_embeddings_2(dim=2)
             self.all_embeddings["size"] = self.all_embeddings["pred_class"] + self.MIN_SPOT_SIZE
             self.all_embeddings.to_pickle(datafile)

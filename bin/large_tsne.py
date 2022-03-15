@@ -29,3 +29,5 @@ rest_init = sample_embedding.prepare_partial(
 init_full = vstack((sample_embedding, rest_init))
 print("tsne data prepare:")
 session.tsne_embeddings_from_init(init_full, len(sample_embedding))
+
+session.plot_embedding_2d(text="cl_clss")
