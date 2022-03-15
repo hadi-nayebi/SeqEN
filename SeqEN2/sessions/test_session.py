@@ -5,6 +5,7 @@
 __version__ = "0.0.1"
 
 from datetime import datetime
+from glob import glob
 from os.path import dirname
 from pathlib import Path
 
@@ -49,6 +50,7 @@ class TestSession:
         self.version = None
         self.model_id = None
         self.embedding_results = {}
+        self.all_embeddings = None
         # run dir
         self.result_dir = None
         # attrs
@@ -101,11 +103,13 @@ class TestSession:
         # combine embeddings
         print("tsne Embeddings ...")
         now()
-        all_embeddings = concat(
+        self.all_embeddings = concat(
             [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
         )
-        all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
-        perplexity = sqrt(len(all_embeddings["uid"]))
+        self.all_embeddings["uid"] = self.all_embeddings.apply(
+            lambda x: f"{x.pr}_{x.unique_id}", axis=1
+        )
+        perplexity = sqrt(len(self.all_embeddings["uid"]))
         model = TSNE(
             n_components=dim,
             learning_rate="auto",
@@ -114,26 +118,49 @@ class TestSession:
             n_iter=10000,
             n_jobs=-1,
         )
-        x_embedded = model.fit_transform(array(all_embeddings["embedding"].values.tolist()))
+        x_embedded = model.fit_transform(self.get_embeddings_from_df())
         for i in range(dim):
-            all_embeddings[f"tsne_{i}"] = x_embedded[:, i]
-        return all_embeddings
+            self.all_embeddings[f"tsne_{i}"] = x_embedded[:, i]
 
-    def tsne_embeddings_2(self, dim=2):
+    def get_embeddings_from_df(self):
+        return array(self.all_embeddings["embedding"].values.tolist())
+
+    def tsne_embeddings_from_init(self, init, aff50, split):
+        embedding = openTSNE.TSNEEmbedding(
+            init,
+            aff50,
+            n_jobs=32,
+            verbose=True,
+            random_state=42,
+        )
+        embedding1 = embedding.optimize(n_iter=500, exaggeration=12, momentum=0.5)
+        embedding2 = embedding1.optimize(n_iter=250, exaggeration=4, momentum=0.8)
+        embedding3 = embedding2.optimize(n_iter=250, exaggeration=4, momentum=0.8)
+        embedding4 = embedding3.optimize(n_iter=250, exaggeration=4, momentum=0.8)
+        embedding = embedding4[split:]
+
+        for i in range(2):
+            self.all_embeddings[f"tsne_{i}"] = embedding[:, i].tolist()
+
+    def tsne_embeddings_2(self, dim=2, return_embeddings=False):
         # combine embeddings
         print("tsne Embeddings ...")
         now()
-        all_embeddings = concat(
-            [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
-        )
-        all_embeddings["uid"] = all_embeddings.apply(lambda x: f"{x.pr}_{x.unique_id}", axis=1)
+        if self.all_embeddings is None and len(self.embedding_results) > 0:
+            self.all_embeddings = concat(
+                [df.assign(pr=key) for key, df in self.embedding_results.items()], ignore_index=True
+            )
+            self.all_embeddings["uid"] = self.all_embeddings.apply(
+                lambda x: f"{x.pr}_{x.unique_id}", axis=1
+            )
         exaggeration = 12
-        data = array(all_embeddings["embedding"].values.tolist())
+        data = self.get_embeddings_from_df()
         aff50 = openTSNE.affinity.PerplexityBasedNN(
             data,
             perplexity=100,
             n_jobs=32,
             random_state=0,
+            verbose=True,
         )
         init = openTSNE.initialization.pca(data, random_state=0)
         embedding_standard = openTSNE.TSNE(
@@ -142,8 +169,26 @@ class TestSession:
             verbose=True,
         ).fit(affinities=aff50, initialization=init)
         for i in range(dim):
-            all_embeddings[f"tsne_{i}"] = embedding_standard[:, i].tolist()
-        return all_embeddings
+            self.all_embeddings[f"tsne_{i}"] = embedding_standard[:, i].tolist()
+
+        if return_embeddings:
+            return embedding_standard, aff50
+        else:
+            return None
+
+    def load_embeddings(self):
+        embeddings_dir = (
+            self.result_dir / f"embeddings_only_{self.model_id}_{self.model.eval_data_loader_name}"
+        )
+        files = glob(f"{embeddings_dir}/*.pkl.bz2")
+        if len(files) > 200:
+            files = files[:200]
+        self.all_embeddings = concat(
+            [read_pickle(fp).assign(pr=fp.split(".")[0]) for fp in tqdm(files)], ignore_index=True
+        )
+        self.all_embeddings["uid"] = self.all_embeddings.apply(
+            lambda x: f"{x.pr}_{x.unique_id}", axis=1
+        )
 
     def plot_embedding_2d(self, auto_open=False, pr_ids=None, text=""):
         if pr_ids is None:
@@ -163,22 +208,23 @@ class TestSession:
             embeddings_dir.mkdir()
 
         if not datafile.exists():
-            all_embeddings = self.tsne_embeddings_2(dim=2)
-            all_embeddings["size"] = all_embeddings["pred_class"] + self.MIN_SPOT_SIZE
-            all_embeddings.to_pickle(datafile)
+            if self.all_embeddings is not None:
+                self.tsne_embeddings_2(dim=2)
+            self.all_embeddings["size"] = self.all_embeddings["pred_class"] + self.MIN_SPOT_SIZE
+            self.all_embeddings.to_pickle(datafile)
         else:
-            all_embeddings = read_pickle(datafile)
+            self.all_embeddings = read_pickle(datafile)
             if len(pr_ids) > 0:
                 pattern = "|".join(pr_ids)
-                mask = all_embeddings["pr"].str.contains(pattern, case=False, na=False)
-                all_embeddings = all_embeddings[mask]
+                mask = self.all_embeddings["pr"].str.contains(pattern, case=False, na=False)
+                self.all_embeddings = self.all_embeddings[mask]
         print("tsne Done.")
         text = f"_{text}" if text != "" else ""
         now()
         # calculate embeddings and tsne to dim dimensions
-        num_samples = len(unique(all_embeddings["pr"]))
+        num_samples = len(unique(self.all_embeddings["pr"]))
         fig = px.scatter(
-            all_embeddings,
+            self.all_embeddings,
             x="tsne_0",
             y="tsne_1",
             color="pr",
@@ -197,7 +243,7 @@ class TestSession:
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         ####
         fig = px.scatter(
-            all_embeddings,
+            self.all_embeddings,
             x="tsne_0",
             y="tsne_1",
             color="w_trg_class",
@@ -216,7 +262,7 @@ class TestSession:
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         ####
         fig = px.line(
-            all_embeddings,
+            self.all_embeddings,
             x="tsne_0",
             y="tsne_1",
             color="pr",
@@ -237,7 +283,7 @@ class TestSession:
         plot(fig, filename=str(html_filename), auto_open=auto_open)
         #####
         fig = px.scatter(
-            all_embeddings,
+            self.all_embeddings,
             x="tsne_0",
             y="tsne_1",
             color="w_trg_class",
