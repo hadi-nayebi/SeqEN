@@ -141,9 +141,9 @@ class TestSession:
             random_state=42,
         )
         embedding1 = embedding.optimize(n_iter=500, exaggeration=12, momentum=0.5)
-        embedding2 = embedding1.optimize(n_iter=250, exaggeration=4, momentum=0.8)
-        embedding3 = embedding2.optimize(n_iter=250, exaggeration=4, momentum=0.8)
-        embedding4 = embedding3.optimize(n_iter=250, exaggeration=4, momentum=0.8)
+        embedding2 = embedding1.optimize(n_iter=250, exaggeration=12, momentum=0.8)
+        embedding3 = embedding2.optimize(n_iter=250, exaggeration=12, momentum=0.8)
+        embedding4 = embedding3.optimize(n_iter=250, exaggeration=12, momentum=0.8)
         embedding = embedding4[split:]
 
         for i in range(2):
@@ -183,7 +183,7 @@ class TestSession:
         else:
             return None
 
-    def load_embeddings(self):
+    def load_embeddings(self, save_aggregate=False):
         embeddings_dir = (
             self.result_dir / f"embeddings_only_{self.model_id}_{self.model.eval_data_loader_name}"
         )
@@ -194,6 +194,13 @@ class TestSession:
         self.all_embeddings["uid"] = self.all_embeddings.apply(
             lambda x: f"{x.pr}_{x.unique_id}", axis=1
         )
+        if save_aggregate:
+            # embeddings dir
+            embeddings_dir = (
+                self.result_dir / f"tsne_{self.model_id}_{self.model.eval_data_loader_name}"
+            )
+            datafile = embeddings_dir / f"all_tsne_dim_2.pkl.bz2"
+            self.all_embeddings.to_pickle(datafile)
 
     def plot_embedding_2d(self, auto_open=False, pr_ids=None, text=""):
         if pr_ids is None:
