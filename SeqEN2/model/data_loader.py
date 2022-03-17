@@ -61,7 +61,7 @@ def read_json(filename) -> dict:
         raise IOError("File format must be .gz or .json.gz")
 
 
-def write_json(data_dict, filename, encoder=None) -> None:
+def write_json(data_dict, filename, encoder=None, pretty=False) -> None:
     """Write json file from a dict, encoding numpy arrays. (.json, .json.gz)"""
     if isinstance(filename, Path):
         filename = str(filename)
@@ -71,14 +71,21 @@ def write_json(data_dict, filename, encoder=None) -> None:
         pass
     else:
         raise NotImplemented(f"No encoding implemented for {encoder}")
-    json_str = json.dumps(data_dict, cls=encoder) + "\n"
+    # handle string dicts:
+    if isinstance(data_dict, str):
+        data_dict = json.loads(data_dict)
     if filename.endswith(".json.gz"):
+        json_str = json.dumps(data_dict, cls=encoder) + "\n"
         with gzip.open(filename, "w") as file:
             json_bytes = json_str.encode("utf-8")
             file.write(json_bytes)
     elif filename.endswith(".json"):
-        with open(filename, "w") as file:
-            file.write(json_str)
+        indent = 4 if pretty else None
+        try:
+            with open(filename, "w") as file:
+                json.dump(data_dict, file, indent=indent)
+        except TypeError as e:
+            raise TypeError(f"use .json.gz to encode numpy ndarray's serialization. {e}")
     else:
         raise IOError("File format must be .gz or .json.gz")
 
