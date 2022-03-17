@@ -21,6 +21,8 @@ from torch import sum as torch_sum
 from torch import tensor
 from torch.nn.functional import unfold
 
+from SeqEN2.protein.utils import ndx_to_seq
+
 
 def consensus(output, ndx, device):
     output_length, w = output.shape
@@ -88,12 +90,6 @@ def sliding_window(input_vals, w, keys=None):
             sliced_seq.append(ndx_to_seq(item, keys))
         return sliced_seq
     return input_ndx
-
-
-def ndx_to_seq(seq, keys):
-    if not isinstance(seq, Tensor):
-        seq = tensor(seq)
-    return "".join([keys[i] for i in seq.long()])
 
 
 def output_to_ndx(output, w):

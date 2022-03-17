@@ -32,7 +32,8 @@ from SeqEN2.autoencoder.autoencoder_classifier_ss_decoder import (
 )
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
 from SeqEN2.model.data_loader import DataLoader
-from SeqEN2.utils.seq_tools import get_consensus_seq, ndx_to_seq, sliding_window
+from SeqEN2.protein.utils import ndx_to_seq
+from SeqEN2.utils.seq_tools import get_consensus_seq, sliding_window
 from SeqEN2.utils.utils import set_random_seed
 
 
@@ -300,9 +301,9 @@ class Model:
             # create a unique id col
             pr_df["unique_id"] = arange(result["embedding"].shape[0])
             # slice input seq
-            pr_df.attrs["seq"] = ndx_to_seq(input_vals[:, 0], self.autoencoder.aa_keys)
+            pr_df.attrs["seq"] = ndx_to_seq(input_vals[:, 0], "aa_keys")
             pr_df["w_seq"] = sliding_window(
-                input_vals[:, 0].reshape((-1, 1)), self.w, keys=self.autoencoder.aa_keys
+                input_vals[:, 0].reshape((-1, 1)), self.w, keys="aa_keys"
             )
             # target classifier, ss
             pr_df.attrs["trg_class"] = None
@@ -317,7 +318,7 @@ class Model:
             elif self.eval_data_loader_key == "ss":
                 pr_df.attrs["trg_ss"] = input_vals[:, 1].cpu()
                 pr_df["w_trg_ss"] = sliding_window(
-                    input_vals[:, 1].reshape((-1, 1)), self.w, keys=self.autoencoder.ss_keys
+                    input_vals[:, 1].reshape((-1, 1)), self.w, keys="ss_keys"
                 )
             elif self.eval_data_loader_key == "clss":
                 pr_df.attrs["trg_ss"] = input_vals[:, 1].cpu()
@@ -326,7 +327,7 @@ class Model:
                     sliding_window(input_vals[:, 2].reshape((-1, 1)), self.w).mean(axis=1).cpu()
                 )
                 pr_df["w_trg_ss"] = sliding_window(
-                    input_vals[:, 1].reshape((-1, 1)), self.w, keys=self.autoencoder.ss_keys
+                    input_vals[:, 1].reshape((-1, 1)), self.w, keys="ss_keys"
                 )
             # result seq
             pr_df.attrs["cons_seq"] = None
@@ -335,10 +336,10 @@ class Model:
             w_seq_out = result.get("reconstructor_output", None)
             if w_seq_out is not None:
                 cons_seq = get_consensus_seq(w_seq_out, self.device)
-                pr_df.attrs["cons_seq"] = ndx_to_seq(cons_seq, self.autoencoder.aa_keys)
+                pr_df.attrs["cons_seq"] = ndx_to_seq(cons_seq, "aa_keys")
                 pr_df["w_seq_out"] = w_seq_out.tolist()
                 pr_df["w_cons_seq"] = sliding_window(
-                    cons_seq.reshape((-1, 1)), self.w, keys=self.autoencoder.aa_keys
+                    cons_seq.reshape((-1, 1)), self.w, keys="aa_keys"
                 )
             # ss
             pr_df.attrs["cons_ss"] = None
@@ -347,10 +348,10 @@ class Model:
             w_ss_out = result.get("ss_decoder_output", None)
             if w_ss_out is not None:
                 cons_ss = get_consensus_seq(w_ss_out, self.device)
-                pr_df.attrs["cons_ss"] = ndx_to_seq(cons_ss, self.autoencoder.ss_keys)
+                pr_df.attrs["cons_ss"] = ndx_to_seq(cons_ss, "ss_keys")
                 pr_df["w_ss_out"] = w_ss_out.tolist()
                 pr_df["w_cons_ss"] = sliding_window(
-                    cons_ss.reshape((-1, 1)), self.w, keys=self.autoencoder.ss_keys
+                    cons_ss.reshape((-1, 1)), self.w, keys="ss_keys"
                 )
             # classifier
             pr_df.attrs["pred_class"] = None
