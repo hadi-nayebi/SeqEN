@@ -1,4 +1,7 @@
+import json
+
 import requests
+from requests import HTTPError
 
 
 class DataPipeline:
@@ -11,5 +14,9 @@ class DataPipeline:
         headers = {"Content-Type": "text/plain", "Accept": "application/json"}
         r = requests.post(self.seq_url, headers=headers, data=seq)
         if not r.ok:
-            r.raise_for_status()
-        return r.text
+            try:
+                r.raise_for_status()
+            except HTTPError as e:
+                print(f"response not OK, {e}")
+            return {}
+        return json.loads(r.text)

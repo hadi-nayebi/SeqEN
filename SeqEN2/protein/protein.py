@@ -28,8 +28,6 @@ class Protein:
 
     def __init__(self, name):
         self._name = name
-        # add name to metadata
-        self.add_metadata("names", {name})
         # define path to save the pickle
         self._path = self.root / "proteins" / f"{self.name}.pkl.bz2"
         # Protein attrs
@@ -40,6 +38,8 @@ class Protein:
         self._annotations = {}  # annotations used for training
         self._dataset = {"name": "", "mode": ""}  # dataset attrs used for the training purposes
         self.metadata = {}
+        # add name to metadata
+        self.add_metadata("names", {name})
 
     @property
     def name(self):
@@ -122,19 +122,27 @@ class Protein:
             self._dataset["name"] = value["name"]
             self._dataset["mode"] = value["mode"]
 
-    def rename(self, new_name):
+    def rename(self, new_name, save=False):
         if new_name != self.name:
-            self.remove_file()
+            if save:
+                self.remove_file()
             self._name = new_name
             self._path = self.root / "proteins" / f"{self.name}.pkl.bz2"
-            self.save_file()
             self.add_metadata("names", {new_name})
+            if save:
+                self.save_file(overwrite=True)
 
     def remove_file(self):
         if self._path.exists():
             system(f"rm {self._path}")
 
-    def save_file(self):
+    def save_file(self, overwrite=False):
+        if not overwrite:
+            i = 0
+            original_name = self._name[:]
+            while self._path.exists():
+                i += 1
+                self.rename(f"{original_name}_{i}")
         with open(self._path, "wb") as f:
             pickle.dump(self, f)
 
@@ -188,19 +196,23 @@ class Protein:
             data[key] = value
         return data
 
-    def update_uniprot_metadata(self):
+    def update_uniprot_metadata(self, db_ref_limit=20):
         data_pipeline = DataPipeline()
         aa_seq = self.aa_seq()
-        result = data_pipeline.fetch_by_seq(aa_seq)
-        # parse and add uniprot metadata to metadata
-        if aa_seq != result["sequence"]["content"]:
-            base_logger.logger.info(f"sequence for {self.name} does not match uniprot results")
-            return
-        self.checksum = result["sequence"]["checksum"]
-        # update name
-        self.rename(result["accession"])
-        # store signatureSequenceMatch
-        self.add_metadata("UP_signatureSequenceMatch", result["signatureSequenceMatch"])
-        # store dbReference
-        self.add_metadata("UP_dbReference", result["dbReference"])
-        self.save_file()
+        try:
+            result = data_pipeline.fetch_by_seq(aa_seq)
+            # parse and add uniprot metadata to metadata
+            if aa_seq != result["sequence"]["content"]:
+                base_logger.logger.info(f"sequence for {self.name} does not match uniprot results")
+                return
+            self.checksum = result["sequence"]["checksum"]
+            # update name
+            self.rename(result["accession"])
+            # store signatureSequenceMatch
+            self.add_metadata("UP_signatureSequenceMatch", result["signatureSequenceMatch"])
+            # store dbReference
+            state = "complete" if len(result["dbReference"]) < db_ref_limit else "partial"
+            up_db_reference = {"value": result["dbReference"][:db_ref_limit], "state": state}
+            self.add_metadata("UP_dbReference", up_db_reference)
+        except KeyError:
+            base_logger.logger.info(f"{self.name} failed to get uniprot metadata.")

@@ -1,3 +1,4 @@
+import pickle
 from collections.abc import Iterable
 
 from numpy import array, int8
@@ -49,3 +50,8 @@ def ndx_to_seq(seq, keys="aa_keys"):
     if not isinstance(seq, Tensor):
         seq = tensor(seq)
     return "".join([KEYS[keys][i] for i in seq.long()])
+
+
+def load_protein(path):
+    with open(path, "rb") as f:
+        return pickle.load(f)
