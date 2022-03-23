@@ -50,7 +50,7 @@
                         },
                         {
                                 "type": "Linear",
-                                "in": 1024,
+                                "in": 384,
                                 "out": 1024,
                                 "init": "xavier"
                         },
@@ -124,14 +124,14 @@
                         },
                         {
                                 "type": "Unflatten",
-                                "in": 64,
-                                "out": 16
+                                "in": 256,
+                                "out": 4
                         },
                         {
                                 "type": "ConvTranspose1d",
-                                "in": 64,
+                                "in": 256,
                                 "out": 64,
-                                "kernel": 5,
+                                "kernel": 3,
                                 "init": "he"
                         },
                         {
@@ -141,8 +141,7 @@
                                 "type": "ConvTranspose1d",
                                 "in": 64,
                                 "out": 64,
-                                "kernel": 5,
-                                "padding": 2,
+                                "kernel": 3,
                                 "init": "he"
                         },
                         {
@@ -152,8 +151,7 @@
                                 "type": "ConvTranspose1d",
                                 "in": 64,
                                 "out": 8,
-                                "kernel": 5,
-                                "padding": 2,
+                                "kernel": 3,
                                 "init": "he"
                         },
                         {
@@ -181,14 +179,14 @@
                         },
                         {
                                 "type": "Unflatten",
-                                "in": 32,
-                                "out": 8
+                                "in": 64,
+                                "out": 4
                         },
                         {
                                 "type": "ConvTranspose1d",
-                                "in": 32,
+                                "in": 64,
                                 "out": 64,
-                                "kernel": 6,
+                                "kernel": 4,
                                 "init": "he"
                         },
                         {
@@ -198,7 +196,7 @@
                                 "type": "ConvTranspose1d",
                                 "in": 64,
                                 "out": 9,
-                                "kernel": 8,
+                                "kernel": 4,
                                 "init": "xavier"
                         },
                         {

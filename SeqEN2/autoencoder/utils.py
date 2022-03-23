@@ -139,3 +139,11 @@ class CustomLRScheduler(optim.lr_scheduler.ReduceLROnPlateau):
 
     def get_last_lr(self):
         return self._last_lr[0]
+
+
+def print_shapes(inputs, module, module_name):
+    print(f"input shape for {module_name}: {inputs.shape}")
+    for name, unit in module.named_children():
+        inputs = unit(inputs)
+        print(name, inputs.shape)
+    return inputs

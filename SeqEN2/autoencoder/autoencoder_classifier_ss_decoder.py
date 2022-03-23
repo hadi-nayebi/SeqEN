@@ -10,6 +10,7 @@ from torch import no_grad, transpose
 
 from SeqEN2.autoencoder.autoencoder_classifier import AutoencoderClassifier
 from SeqEN2.autoencoder.autoencoder_ss_decoder import AutoencoderSSDecoder
+from SeqEN2.autoencoder.utils import print_shapes
 from SeqEN2.utils.custom_dataclasses import AECSSTrainingSettings
 from SeqEN2.utils.seq_tools import output_to_ndx
 
@@ -47,6 +48,23 @@ class AutoencoderClassifierSSDecoder(AutoencoderClassifier, AutoencoderSSDecoder
         devectorized = self.devectorizer(decoded)
         classifier_output = self.classifier(encoded)
         ss_decoder_output = transpose(self.ss_decoder(encoded), 1, 2).reshape(-1, self.ds)
+        return devectorized, classifier_output, ss_decoder_output, encoded
+
+    def unit_test_forward(self, one_hot_input):
+        vectorized = print_shapes(
+            one_hot_input.reshape((-1, self.d0)), self.vectorizer, "vectorizer"
+        )
+        encoded = print_shapes(
+            transpose(vectorized.reshape((-1, self.w, self.d1)), 1, 2), self.encoder, "encoder"
+        )
+        decoded = transpose(print_shapes(encoded, self.decoder, "decoder"), 1, 2).reshape(
+            -1, self.d1
+        )
+        devectorized = print_shapes(decoded, self.devectorizer, "devectorizer")
+        classifier_output = print_shapes(encoded, self.classifier, "classifier")
+        ss_decoder_output = transpose(
+            print_shapes(encoded, self.ss_decoder, "ss_decoder"), 1, 2
+        ).reshape(-1, self.ds)
         return devectorized, classifier_output, ss_decoder_output, encoded
 
     def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="ASC"):
