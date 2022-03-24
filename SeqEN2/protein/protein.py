@@ -165,6 +165,9 @@ class Protein:
         else:
             self.metadata[key] = value
 
+    def del_metadata(self, key):
+        del self.metadata[key]
+
     def aa_seq(self, no_padding=True):
         if no_padding:
             return ndx_to_seq(self._seq_ndx, keys="aa_keys").replace("*", "")
