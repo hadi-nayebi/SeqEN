@@ -1,15 +1,15 @@
 import pickle
-from collections.abc import Iterable
 from os import system
 from os.path import dirname
 from pathlib import Path
 
-from numpy import array, int8
+from numpy import array, int8, zeros
 
 from SeqEN2.protein.exceptions import ImmutablePropertyError
 from SeqEN2.protein.utils import (
     AA_PADDING_NDX,
     SS_PADDING_NDX,
+    get_tax_id_from_uniprot_metadata,
     is_array_int,
     is_array_p,
     is_protein_sequence,
@@ -195,29 +195,68 @@ class Protein:
         )
         return output
 
-    def get_data(self):
-        data = {"ndx": self._seq_ndx, "ss": self._seq_ss}
-        for key, value in self._annotations.items():
-            data[key] = value
+    def get_data(self, ss=False, annotations=None):
+        data = {"ndx": self._seq_ndx}
+        if ss and self._seq_ss is not None:
+            data["ss"] = self._seq_ss
+        if annotations is not None and isinstance(annotations, list):
+            for key, value in self._annotations.items():
+                if key in annotations:
+                    data[key] = value
         return data
 
-    def update_uniprot_metadata(self, db_ref_limit=20):
-        data_pipeline = DataPipeline()
+    def update_uniprot_metadata(self, db_ref_limit=20, data_pipeline=None):
+        if data_pipeline is None:
+            data_pipeline = DataPipeline()
         aa_seq = self.aa_seq()
-        try:
-            result = data_pipeline.fetch_by_seq(aa_seq)
+        result = data_pipeline.fetch_by_seq(aa_seq)
+        if result == {}:
+            self.add_metadata("errors", {"uniprot returns {}."})
+            return
             # parse and add uniprot metadata to metadata
+        if "sequence" in result.keys():
             if aa_seq != result["sequence"]["content"]:
-                base_logger.logger.info(f"sequence for {self.name} does not match uniprot results")
+                self.add_metadata("errors", {"seq do nat match uniprot seq."})
+                # base_logger.logger.info(f"sequence for {self.name} does not match uniprot results")
                 return
             self.checksum = result["sequence"]["checksum"]
-            # update name
-            self.rename(result["accession"])
-            # store signatureSequenceMatch
+        else:
+            self.add_metadata("errors", {"uniprot metadata missing sequence."})
+        # update name
+        self.rename(result["accession"])
+        # store signatureSequenceMatch
+        if "signatureSequenceMatch" in result.keys():
             self.add_metadata("UP_signatureSequenceMatch", result["signatureSequenceMatch"])
-            # store dbReference
+        else:
+            self.add_metadata("errors", {"uniprot metadata missing signatureSequenceMatch."})
+        # store dbReference
+        if "dbReference" in result.keys():
+            # get tax id
+            self.add_metadata("NCBI_taxonomy_id", get_tax_id_from_uniprot_metadata(result))
             state = "complete" if len(result["dbReference"]) < db_ref_limit else "partial"
             up_db_reference = {"value": result["dbReference"][:db_ref_limit], "state": state}
             self.add_metadata("UP_dbReference", up_db_reference)
-        except KeyError:
-            base_logger.logger.info(f"{self.name} failed to get uniprot metadata.")
+        else:
+            self.add_metadata("errors", {"uniprot metadata missing dbReference."})
+
+    def copy(self, other):
+        assert isinstance(other, Protein)
+        for key, value in other.__dict__.items():
+            if key in self.__dict__.keys():
+                self.__dict__[key] = value
+
+    def add_annotation(self, name, database_domain_ids):
+        assert "UP_signatureSequenceMatch" in self.metadata.keys()
+        has = False
+        vals = zeros(self._seq_ndx.shape, dtype=float)
+        for item in self.metadata["UP_signatureSequenceMatch"]:
+            for database, domain_ids in database_domain_ids.items():
+                if item["database"] == database and item["id"] in domain_ids:
+                    for pos in item["lcn"]:
+                        start = self.padding + pos["start"]
+                        end = self.padding + pos["end"]
+                        vals[start:end] += 1
+                        has = True
+        if has:
+            vals = vals / max(vals)
+            self.annotations = {name: vals}
