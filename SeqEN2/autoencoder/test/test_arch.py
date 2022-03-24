@@ -43,7 +43,7 @@ class TestAutoencoderArch(TestCase):
         cls.data_loader.load_test_data(cls.DATASET_NAME_clss, cls.device)
         cls.data_loader.load_train_data(cls.DATASET_NAME_clss, cls.device)
         # random train sample
-        cls.train_batch = list(cls.data_loader.get_train_batch(batch_size=10))[0]
+        cls.train_batch = list(cls.data_loader.get_train_batch(batch_size=1))
         # fixed test sample
         cls.test_batch = cls.data_loader.get_by_key(cls.TEST_KEY)
         cls.autoencoder.to(cls.device)
@@ -51,7 +51,7 @@ class TestAutoencoderArch(TestCase):
 
     def test_forward(self):
         # test batch returns a tuple (data, metadata)
-        input_vals = self.test_batch[0]
+        input_vals = self.train_batch[10]
         input_ndx, _, _, one_hot_input = self.autoencoder.transform_input(input_vals, self.device)
         (
             devectorized,
