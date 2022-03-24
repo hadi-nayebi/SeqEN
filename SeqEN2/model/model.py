@@ -150,8 +150,13 @@ class Model:
             if "LR" in key:
                 wandb.log({f"{key}": mean(item)})
             else:
-                wandb.log({key: wandb.Histogram(item)})
-                wandb.log({f"{key}_mean": mean(item)})
+                try:
+                    wandb.log({key: wandb.Histogram(item)})
+                    wandb.log({f"{key}_mean": mean(item)})
+                except ValueError:
+                    wandb.log({key: wandb.Histogram([0.0])})
+                    wandb.log({f"{key}_mean": mean([0.0])})
+                    print(key, item)
         self.autoencoder.reset_log()
 
     def initialize_training(
