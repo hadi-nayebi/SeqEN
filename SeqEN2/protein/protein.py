@@ -90,6 +90,8 @@ class Protein:
     def checksum(self, value):
         try:
             if self._checksum is not None:
+                if value == self._checksum:
+                    return
                 raise ImmutablePropertyError(attr="Checksum")
             self._checksum = value
         except ImmutablePropertyError:
