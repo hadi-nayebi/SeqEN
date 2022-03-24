@@ -55,3 +55,12 @@ def ndx_to_seq(seq, keys="aa_keys"):
 def load_protein(path):
     with open(path, "rb") as f:
         return pickle.load(f)
+
+
+def get_tax_id_from_uniprot_metadata(metadata):
+    for item in metadata["dbReference"]:
+        if "property" in item.keys():
+            for val in item["property"]:
+                if val["type"] == "NCBI_taxonomy_id":
+                    return val["value"]
+    return None
