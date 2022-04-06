@@ -18,9 +18,9 @@ for v, n, a in models["AECSS"]:
     system(
         f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n LONG -mv {v} -mid {n} -dcl cl_train -a {a} -teb -1 -ge"
     )
-    # system(
-    #     f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dcl kegg_ndx_ACTp_test -a {a} -teb -1 -ge"
-    # )
-    # system(
-    #     f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dcl kegg_ndx_ACTp_train -a {a} -teb -1 -ge"
-    # )
+    system(
+        f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dss ss_test -a {a} -teb -1 -ge"
+    )
+    system(
+        f"python3 ~/SeqEncoder/SeqEN/SeqEN2/sessions/test_session.py -n AECSS -mv {v} -mid {n} -dss ss_train -a {a} -teb -1 -ge"
+    )
