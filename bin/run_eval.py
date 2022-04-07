@@ -4,7 +4,7 @@ models = {
     "AECSS": [
         # ("202203042153_AECSS_arch66", 24, "arch66"),
         # ("202203050040_AECSS_arch69", 24, "arch69"),
-        ("202203050123_AECSS_arch70", 548, "arch70"),
+        ("202203050123_AECSS_arch70", 544, "arch70"),
         # ("202203042153_AECSS_arch66_dcl", 29, "arch66"),
     ]
 }
