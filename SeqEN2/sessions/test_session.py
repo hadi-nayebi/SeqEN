@@ -94,7 +94,8 @@ class TestSession:
         ):
             if item.attrs["name"] in EXCEPTIONS:
                 continue
-            self.embedding_results[item.attrs["name"]] = item
+            if len(self.embedding_results) < 1000:
+                self.embedding_results[item.attrs["name"]] = item
             datafile = embeddings_dir / f"{item.attrs['name']}.pkl.bz2"
             item.to_pickle(datafile)
         now()
@@ -347,9 +348,9 @@ def main(args):
         test_session.get_embedding(num_test_items=args["Test Batch"])
     if args["tSNE dim"]:
         if args["tSNE dim"] == 2:
-            pr_ids = args["Pr IDs"].split(",") if args["Pr IDs"] != "" else None
+            # pr_ids = args["Pr IDs"].split(",") if args["Pr IDs"] != "" else None
             text = args["Text"]
-            test_session.plot_embedding_2d(pr_ids=pr_ids, text=text)
+            test_session.plot_embedding_2d(text=text)
 
 
 if __name__ == "__main__":
