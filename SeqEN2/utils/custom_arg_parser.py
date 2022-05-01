@@ -74,6 +74,13 @@ class TrainSessionArgParser(DefaultParser):
             "-ts", "--training_settings", type=str, help="Training Settings", default=None
         )
         self.parser.add_argument(
+            "-mts",
+            "--modular_training_settings",
+            type=str,
+            help="Modular Training Settings",
+            default=None,
+        )
+        self.parser.add_argument(
             "-nt", "--no_train", help="No Train", action="store_true", default=False
         )
         self.parser.add_argument(
