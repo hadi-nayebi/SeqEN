@@ -63,12 +63,26 @@ class TrainSession:
                 raise TypeError("Train setting must be str or Path-like object")
         return training_settings
 
+    def load_modular_training_settings(self, modular_training_settings=None) -> Dict:
+        if modular_training_settings is not None:
+            if isinstance(modular_training_settings, Path):
+                modular_training_settings = read_json(str(modular_training_settings))
+            elif isinstance(modular_training_settings, str):
+                modular_training_settings_path = (
+                    self.train_params_dir / f"{modular_training_settings}.json"
+                )
+                modular_training_settings = read_json(str(modular_training_settings_path))
+            else:
+                raise TypeError("Train setting must be str or Path-like object")
+        return modular_training_settings
+
     def train(
         self,
         epochs=10,
         batch_size=128,
         test_interval=100,
         training_settings=None,
+        modular_training_settings=None,
         input_noise=0.0,
         log_every=100,
         mvid=None,
@@ -77,6 +91,7 @@ class TrainSession:
         branch="",
     ):
         training_settings = self.load_training_settings(training_settings)
+        modular_training_settings = self.load_modular_training_settings(modular_training_settings)
         if self.is_testing:
             # add more default setting for is_testing
             epochs = 1
@@ -85,6 +100,7 @@ class TrainSession:
             batch_size=batch_size,
             test_interval=test_interval,
             training_settings=training_settings,
+            modular_training_settings=modular_training_settings,
             input_noise=input_noise,
             log_every=log_every,
             is_testing=self.is_testing,
@@ -122,6 +138,7 @@ def main(args):
     # load datafiles
     mvid = None
     training_settings = args["Training Settings"]
+    modular_training_settings = args["Modular Training Settings"]
     if args["Dataset_cl"] != "":
         train_session.load_data("cl", args["Dataset_cl"])
     if args["Dataset_ss"] != "":
@@ -143,6 +160,14 @@ def main(args):
             / parsed_mvid[0]
             / "training_settings.json"
         )
+        modular_training_settings = (
+            train_session.root
+            / "models"
+            / name
+            / "versions"
+            / parsed_mvid[0]
+            / "modular_training_settings.json"
+        )
     if args["Overfitting"]:
         train_session.overfit_tests(
             epochs=args["Epochs"],
@@ -158,6 +183,7 @@ def main(args):
             batch_size=args["Train Batch"],
             test_interval=args["Test Interval"],
             training_settings=training_settings,
+            modular_training_settings=modular_training_settings,
             input_noise=args["Input Noise"],
             log_every=args["Log every"],
             mvid=mvid,
