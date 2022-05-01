@@ -1,0 +1,15 @@
+{
+    "apply": false,
+    "focused": {
+        "lr": 0.01,
+        "params": {
+            "lr": 0.0001,
+            "factor": 0.99,
+            "patience": 1000,
+            "min_lr": 0.0001,
+            "max_lr": 0.01,
+            "max_loss_change": 0.1,
+            "min_loss_change": 0.01
+        }
+    }
+}
