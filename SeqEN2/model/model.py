@@ -163,6 +163,7 @@ class Model:
         self,
         batch_size=128,
         training_settings=None,
+        modular_training_settings=None,
         input_noise=0.0,
         mvid=None,
         ignore_continuity=False,
@@ -192,8 +193,11 @@ class Model:
         self.config.dataset_name_ss = self.dataset_name_ss
         self.config.dataset_name_clss = self.dataset_name_clss
         self.config.ignore_continuity = ignore_continuity
-        self.autoencoder.initialize_for_training(training_settings=training_settings)
+        self.autoencoder.initialize_for_training(
+            training_settings=training_settings, modular_training_settings=modular_training_settings
+        )
         self.config.training_settings = self.autoencoder.training_settings.to_dict()
+        self.config.modular_training_settings = self.autoencoder.modular_training_settings.to_dict()
         self.config.model_type = model_type
         self.config.arch = arch_name
         wandb.watch(self.autoencoder)
@@ -205,6 +209,15 @@ class Model:
             )
             system(f"cp {str(update_setting_file_original)} {str(update_setting_file)}")
         #
+        update_modular_setting_file = train_dir / "update_modular_training_settings.json"
+        if not update_setting_file.exists():
+            update_modular_setting_file_original = (
+                self.root / "config" / "train_params" / "update_modular_training_settings.json"
+            )
+            system(
+                f"cp {str(update_modular_setting_file_original)} {str(update_modular_setting_file)}"
+            )
+        #
         return train_dir, start_epoch
 
     def store_model(self, model, train_dir, epoch):
@@ -214,6 +227,7 @@ class Model:
         system(f"rm {model_path}")
         self.autoencoder.save(train_dir, epoch)
         self.autoencoder.save_training_settings(train_dir)
+        self.autoencoder.save_modular_training_settings(train_dir)
 
     @staticmethod
     def finalize_training(train_dir, is_testing=False):
@@ -228,8 +242,10 @@ class Model:
         batch_size=128,
         test_interval=100,
         training_settings=None,
+        modular_training_settings=None,
         input_noise=0.0,
         log_every=100,
+        focus=None,
         is_testing=False,
         mvid=None,
         ignore_continuity=False,
@@ -238,9 +254,11 @@ class Model:
     ):
         assert not self.eval_only, "Model is in eval_only mode and cannot be trained"
         self.autoencoder.ignore_continuity = ignore_continuity
+        self.autoencoder.focus = focus
         train_dir, start_epoch = self.initialize_training(
             batch_size=batch_size,
             training_settings=training_settings,
+            modular_training_settings=modular_training_settings,
             input_noise=input_noise,
             mvid=mvid,
             ignore_continuity=ignore_continuity,
@@ -268,6 +286,7 @@ class Model:
             if (epoch + 1) % save_model_interval == 0:
                 self.store_model(model, train_dir, epoch)
             self.autoencoder.update_training_settings(train_dir)
+            self.autoencoder.update_modular_training_settings(train_dir)
         self.finalize_training(train_dir, is_testing=is_testing)
 
     def overfit(self, epochs=1000, num_test_items=1, input_noise=0.0, training_settings=None):
