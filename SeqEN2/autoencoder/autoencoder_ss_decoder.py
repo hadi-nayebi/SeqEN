@@ -138,7 +138,7 @@ class AutoencoderSSDecoder(Autoencoder):
         one_hot_input = kwargs["one_hot_input"]
         target_vals_ss = kwargs["target_vals_ss"]
         input_keys = kwargs["input_keys"]
-        if "S" in input_keys:
+        if "S" in input_keys and "C" not in input_keys:
             ss_decoder_output = self.forward_ss_decoder(one_hot_input)
             loss = self.criterion_NLLLoss(ss_decoder_output, target_vals_ss.reshape((-1,)))
             loss.backward()
