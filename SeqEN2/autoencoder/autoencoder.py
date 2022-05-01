@@ -15,9 +15,9 @@ from torch.nn import Module, MSELoss, NLLLoss
 from torch.nn.functional import one_hot
 from torch.nn.utils import clip_grad_value_
 
-from SeqEN2.autoencoder.utils import CustomLRScheduler, LayerMaker
+from SeqEN2.autoencoder.utils import CustomLRScheduler, FocusedLRScheduler, LayerMaker
 from SeqEN2.model.data_loader import read_json, write_json
-from SeqEN2.utils.custom_dataclasses import AETrainingSettings
+from SeqEN2.utils.custom_dataclasses import AETrainingSettings, ModularTrainingSettings
 from SeqEN2.utils.seq_tools import (
     add_noise,
     consensus_acc,
@@ -52,12 +52,17 @@ class Autoencoder(Module):
         self.devectorizer = LayerMaker().make(self.arch.devectorizer)
         # training components
         self._training_settings = AETrainingSettings()
+        self._modular_training_settings = ModularTrainingSettings()
         # define customized optimizers
         self.reconstructor_optimizer = None
         self.reconstructor_lr_scheduler = None
         self.ignore_continuity = False
         self.continuity_optimizer = None
         self.continuity_lr_scheduler = None
+        # by module
+        self.focus = None
+        self.focused_optimizer = None
+        self.focused_lr_scheduler = None
         # Loss functions
         self.criterion_NLLLoss = NLLLoss()
         self.criterion_MSELoss = MSELoss()
@@ -83,10 +88,35 @@ class Autoencoder(Module):
                 f"Training settings must be a dict or None or type AETrainingSettings, {type(value)} is passed."
             )
 
+    @property
+    def modular_training_settings(self) -> ModularTrainingSettings:
+        return self._modular_training_settings
+
+    @modular_training_settings.setter
+    def modular_training_settings(self, value=None) -> None:
+        if isinstance(value, Dict) or value is None or isinstance(value, ModularTrainingSettings):
+            if isinstance(value, Dict):
+                try:
+                    self._modular_training_settings = ModularTrainingSettings(**value)
+                except TypeError as e:
+                    raise KeyError(f"missing/extra keys for ModularTrainingSettings, {e}")
+            elif isinstance(value, ModularTrainingSettings):
+                self._modular_training_settings = value
+        else:
+            raise TypeError(
+                f"Training settings must be a dict or None or type ModularTrainingSettings, {type(value)} is passed."
+            )
+
     def save_training_settings(self, train_dir):
         write_json(
             self.training_settings.to_dict(),
             str(train_dir / "training_settings.json"),
+        )
+
+    def save_modular_training_settings(self, train_dir):
+        write_json(
+            self.modular_training_settings.to_dict(),
+            str(train_dir / "modular_training_settings.json"),
         )
 
     def update_training_settings(self, train_dir):
@@ -103,6 +133,22 @@ class Autoencoder(Module):
                 self.initialize_for_training(training_settings=new_training_setting_dict)
                 new_training_setting["apply"] = False
                 write_json(new_training_setting, new_training_setting_path)
+
+    def update_modular_training_settings(self, train_dir):
+        new_modular_training_setting_path = train_dir / "update_modular_training_settings.json"
+        if new_modular_training_setting_path.exists():
+            new_modular_training_setting = read_json(str(new_modular_training_setting_path))
+            if new_modular_training_setting["apply"]:
+                new_modular_training_setting_dict = {}
+                for key, item in self.modular_training_settings.to_dict().items():
+                    new_modular_training_setting_dict[key] = new_modular_training_setting[key][
+                        "params"
+                    ]
+                self.initialize_for_training(
+                    modular_training_settings=new_modular_training_setting_dict
+                )
+                new_modular_training_setting["apply"] = False
+                write_json(new_modular_training_setting, new_modular_training_setting_path)
 
     def forward_encoder_decoder(self, one_hot_input):
         vectorized = self.vectorizer(one_hot_input.reshape((-1, self.d0)))
@@ -174,10 +220,54 @@ class Autoencoder(Module):
             patience=self._training_settings.continuity.patience,
             min_lr=self._training_settings.continuity.min_lr,
         )
+        if self.focus is not None:
+            if self.focus == "vectorizer":
+                self.focused_optimizer = optim.SGD(
+                    [
+                        {"params": self.vectorizer.parameters()},
+                    ],
+                    lr=self._modular_training_settings.focused.lr,
+                )
+            elif self.focus == "encoder":
+                self.focused_optimizer = optim.SGD(
+                    [
+                        {"params": self.encoder.parameters()},
+                    ],
+                    lr=self._modular_training_settings.focused.lr,
+                )
+            elif self.focus == "decoder":
+                self.focused_optimizer = optim.SGD(
+                    [
+                        {"params": self.decoder.parameters()},
+                    ],
+                    lr=self._modular_training_settings.focused.lr,
+                )
+            elif self.focus == "devectorizer":
+                self.focused_optimizer = optim.SGD(
+                    [
+                        {"params": self.devectorizer.parameters()},
+                    ],
+                    lr=self._modular_training_settings.focused.lr,
+                )
 
-    def initialize_for_training(self, training_settings=None):
+    def setup_focused_lr_scheduler(self):
+        if self.focused_optimizer is not None:
+            self.focused_lr_scheduler = FocusedLRScheduler(
+                self.focused_optimizer,
+                self._modular_training_settings.focused.lr,
+                factor=self._modular_training_settings.focused.factor,
+                patience=self._modular_training_settings.focused.patience,
+                min_lr=self._modular_training_settings.focused.min_lr,
+                max_lr=self._modular_training_settings.focused.max_lr,
+                max_loss_change=self._modular_training_settings.focused.max_loss_change,
+                min_loss_change=self._modular_training_settings.focused.min_loss_change,
+            )
+
+    def initialize_for_training(self, training_settings=None, modular_training_settings=None):
         self.training_settings = training_settings
+        self.modular_training_settings = modular_training_settings
         self.initialize_training_components()
+        self.setup_focused_lr_scheduler()
 
     def transform_input(self, input_vals, device, input_noise=0.0, input_keys="A--"):
         # input_keys = "A--" : sequence, "AC-" sequence:class, "AS-" sequence:ss, "ACS" seq:class:ss, "
@@ -245,6 +335,25 @@ class Autoencoder(Module):
             self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
             self.continuity_lr_scheduler.step(continuity_loss.item())
 
+    def train_focused(self, **kwargs):
+        self.focused_optimizer.zero_grad()
+        loss = None
+        if self.focus in ["vectorizer", "encoder", "decoder", "devectorizer"]:
+            loss = self.autoencoder_focused(**kwargs)
+        self.focused_optimizer.step()
+        self._modular_training_settings.focused.lr = self.focused_lr_scheduler.get_last_lr()
+        self.focused_lr_scheduler.step(loss.item())
+        self.log(f"focused_{self.focus}_LR", self.focused_lr_scheduler.get_last_lr())
+
+    def autoencoder_focused(self, **kwargs):
+        one_hot_input = kwargs["one_hot_input"]
+        input_ndx = kwargs["input_ndx"]
+        reconstructor_output = self.forward_encoder_decoder(one_hot_input)
+        loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
+        loss.backward()
+        self.clip_reconstructor_gradients()
+        return loss
+
     def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A--"):
         if input_vals is not None:
             input_ndx, _, _, one_hot_input = self.transform_input(
@@ -253,6 +362,8 @@ class Autoencoder(Module):
             self.train_reconstructor(one_hot_input, input_ndx)
             # train for continuity
             self.train_continuity(one_hot_input)
+            if self.focus is not None:
+                self.train_focused(one_hot_input=one_hot_input, input_ndx=input_ndx)
 
     def train_batch(self, input_vals, device, input_noise=0.0):
         """
