@@ -93,6 +93,14 @@ class AutoencoderClassifier(Autoencoder):
             patience=self._training_settings.classifier.patience,
             min_lr=self._training_settings.classifier.min_lr,
         )
+        if self.focus is not None:
+            if self.focus == "classifier":
+                self.focused_optimizer = optim.SGD(
+                    [
+                        {"params": self.classifier.parameters()},
+                    ],
+                    lr=self._modular_training_settings.focused.lr,
+                )
 
     def clip_classifier_gradients(self):
         # gradient clipping:
@@ -113,6 +121,31 @@ class AutoencoderClassifier(Autoencoder):
         self._training_settings.classifier.lr = self.classifier_lr_scheduler.get_last_lr()
         self.classifier_lr_scheduler.step(classifier_loss.item())
 
+    def train_focused(self, **kwargs):
+        self.focused_optimizer.zero_grad()
+        loss = None
+        if self.focus in ["vectorizer", "encoder", "decoder", "devectorizer"]:
+            loss = self.autoencoder_focused(**kwargs)
+        elif self.focus == "classifier":
+            loss = self.classifier_focused(**kwargs)
+        if loss is not None:
+            self.focused_optimizer.step()
+            self._modular_training_settings.focused.lr = self.focused_lr_scheduler.get_last_lr()
+            self.focused_lr_scheduler.step(loss.item())
+            self.log(f"focused_{self.focus}_LR", self.focused_lr_scheduler.get_last_lr())
+
+    def classifier_focused(self, **kwargs):
+        one_hot_input = kwargs["one_hot_input"]
+        target_vals_cl = kwargs["target_vals_cl"]
+        input_keys = kwargs["input_keys"]
+        if "C" in input_keys:
+            classifier_output = self.forward_classifier(one_hot_input)
+            loss = self.criterion_MSELoss(classifier_output, target_vals_cl)
+            loss.backward()
+            self.clip_classifier_gradients()
+            return loss
+        return None
+
     def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="A-C"):
         if input_vals is not None:
             input_ndx, _, target_vals_cl, one_hot_input = self.transform_input(
@@ -123,6 +156,13 @@ class AutoencoderClassifier(Autoencoder):
             self.train_continuity(one_hot_input)
             if "C" in input_keys:
                 self.train_classifier(one_hot_input, target_vals_cl)
+            if self.focus is not None:
+                self.train_focused(
+                    one_hot_input=one_hot_input,
+                    input_ndx=input_ndx,
+                    target_vals_cl=target_vals_cl,
+                    input_keys=input_keys,
+                )
 
     @staticmethod
     def assert_input_type(input_vals):
