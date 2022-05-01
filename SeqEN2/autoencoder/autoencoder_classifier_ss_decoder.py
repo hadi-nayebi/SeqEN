@@ -67,6 +67,21 @@ class AutoencoderClassifierSSDecoder(AutoencoderClassifier, AutoencoderSSDecoder
         ).reshape(-1, self.ds)
         return devectorized, classifier_output, ss_decoder_output, encoded
 
+    def train_focused(self, **kwargs):
+        self.focused_optimizer.zero_grad()
+        loss = None
+        if self.focus in ["vectorizer", "encoder", "decoder", "devectorizer"]:
+            loss = self.autoencoder_focused(**kwargs)
+        elif self.focus == "classifier":
+            loss = self.classifier_focused(**kwargs)
+        elif self.focus == "ss_decoder":
+            loss = self.ss_decoder_focused(**kwargs)
+        if loss is not None:
+            self.focused_optimizer.step()
+            self._modular_training_settings.focused.lr = self.focused_lr_scheduler.get_last_lr()
+            self.focused_lr_scheduler.step(loss.item())
+            self.log(f"focused_{self.focus}_LR", self.focused_lr_scheduler.get_last_lr())
+
     def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="ASC"):
         if input_vals is not None:
             input_ndx, target_vals_ss, target_vals_cl, one_hot_input = self.transform_input(
@@ -79,6 +94,14 @@ class AutoencoderClassifierSSDecoder(AutoencoderClassifier, AutoencoderSSDecoder
                 self.train_classifier(one_hot_input, target_vals_cl)
             if "S" in input_keys:
                 self.train_ss_decoder(one_hot_input, target_vals_ss)
+            if self.focus is not None:
+                self.train_focused(
+                    one_hot_input=one_hot_input,
+                    input_ndx=input_ndx,
+                    target_vals_cl=target_vals_cl,
+                    target_vals_ss=target_vals_ss,
+                    input_keys=input_keys,
+                )
 
     @staticmethod
     def assert_input_type(input_vals):
