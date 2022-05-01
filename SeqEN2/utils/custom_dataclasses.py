@@ -132,3 +132,21 @@ class AECSSTrainingSettings(NoneRefersDefault):
     continuity: TrainingParams = DefaultVal(TrainingParams()).val
     classifier: TrainingParams = DefaultVal(TrainingParams()).val
     ss_decoder: TrainingParams = DefaultVal(TrainingParams()).val
+
+
+@dataclass_json(undefined=Undefined.RAISE)
+@dataclass
+class ModularTrainingParams(NoneRefersDefault):
+    lr: float = DefaultVal(0.0001)
+    factor: float = DefaultVal(0.99)
+    patience: float = DefaultVal(1000)
+    min_lr: float = DefaultVal(0.0001)
+    max_lr: float = DefaultVal(0.01)
+    max_loss_change: float = DefaultVal(0.1)
+    min_loss_change: float = DefaultVal(0.01)
+
+
+@dataclass_json(undefined=Undefined.RAISE)
+@nested_deco
+class ModularTrainingSettings(NoneRefersDefault):
+    focused: TrainingParams = DefaultVal(ModularTrainingParams()).val
