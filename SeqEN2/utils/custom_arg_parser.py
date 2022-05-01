@@ -101,6 +101,7 @@ class TrainSessionArgParser(DefaultParser):
             "-smi", "--save_model_interval", type=int, help="Save Model Interval", default=1
         )
         self.parser.add_argument("-b", "--branch", type=str, help="Branch", default="")
+        self.parser.add_argument("-f", "--focus", type=str, help="Focus", default=None)
 
 
 class TestSessionArgParser(DefaultParser):

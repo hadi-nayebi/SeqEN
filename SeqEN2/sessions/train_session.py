@@ -89,6 +89,7 @@ class TrainSession:
         ignore_continuity=False,
         save_model_interval=1,
         branch="",
+        focus=None,
     ):
         training_settings = self.load_training_settings(training_settings)
         modular_training_settings = self.load_modular_training_settings(modular_training_settings)
@@ -108,6 +109,7 @@ class TrainSession:
             ignore_continuity=ignore_continuity,
             save_model_interval=save_model_interval,
             branch=branch,
+            focus=focus,
         )
 
     def test(self, num_test_items=1):
@@ -190,6 +192,7 @@ def main(args):
             ignore_continuity=args["No Continuity"],
             save_model_interval=args["Save Model Interval"],
             branch=args["Branch"],
+            focus=args["Focus"],
         )
 
 
