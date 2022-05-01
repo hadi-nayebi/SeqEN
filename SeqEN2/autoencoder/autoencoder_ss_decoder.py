@@ -93,8 +93,16 @@ class AutoencoderSSDecoder(Autoencoder):
             patience=self._training_settings.ss_decoder.patience,
             min_lr=self._training_settings.ss_decoder.min_lr,
         )
+        if self.focus is not None:
+            if self.focus == "ss_decoder":
+                self.focused_optimizer = optim.SGD(
+                    [
+                        {"params": self.ss_decoder.parameters()},
+                    ],
+                    lr=self._modular_training_settings.focused.lr,
+                )
 
-    def clip_classifier_gradients(self):
+    def clip_ss_decoder_gradients(self):
         # gradient clipping:
         clip_grad_value_(self.vectorizer.parameters(), clip_value=self.g_clip)
         clip_grad_value_(self.encoder.parameters(), clip_value=self.g_clip)
@@ -106,12 +114,37 @@ class AutoencoderSSDecoder(Autoencoder):
         ss_decoder_output = self.forward_ss_decoder(one_hot_input)
         ss_decoder_loss = self.criterion_NLLLoss(ss_decoder_output, target_vals_ss.reshape((-1,)))
         ss_decoder_loss.backward()
-        self.clip_classifier_gradients()
+        self.clip_ss_decoder_gradients()
         self.ss_decoder_optimizer.step()
         self._training_settings.ss_decoder.lr = self.ss_decoder_lr_scheduler.get_last_lr()
         self.ss_decoder_lr_scheduler.step(ss_decoder_loss.item())
         self.log("ss_decoder_loss", ss_decoder_loss.item())
         self.log("ss_decoder_LR", self.training_settings.ss_decoder.lr)
+
+    def train_focused(self, **kwargs):
+        self.focused_optimizer.zero_grad()
+        loss = None
+        if self.focus in ["vectorizer", "encoder", "decoder", "devectorizer"]:
+            loss = self.autoencoder_focused(**kwargs)
+        elif self.focus == "ss_decoder":
+            loss = self.ss_decoder_focused(**kwargs)
+        if loss is not None:
+            self.focused_optimizer.step()
+            self._modular_training_settings.focused.lr = self.focused_lr_scheduler.get_last_lr()
+            self.focused_lr_scheduler.step(loss.item())
+            self.log(f"focused_{self.focus}_LR", self.focused_lr_scheduler.get_last_lr())
+
+    def ss_decoder_focused(self, **kwargs):
+        one_hot_input = kwargs["one_hot_input"]
+        target_vals_ss = kwargs["target_vals_ss"]
+        input_keys = kwargs["input_keys"]
+        if "S" in input_keys:
+            ss_decoder_output = self.forward_ss_decoder(one_hot_input)
+            loss = self.criterion_NLLLoss(ss_decoder_output, target_vals_ss.reshape((-1,)))
+            loss.backward()
+            self.clip_ss_decoder_gradients()
+            return loss
+        return None
 
     def train_one_batch(self, input_vals, input_noise=0.0, device=None, input_keys="AS-"):
         if input_vals is not None:
@@ -123,6 +156,13 @@ class AutoencoderSSDecoder(Autoencoder):
             self.train_continuity(one_hot_input)
             if "S" in input_keys:
                 self.train_ss_decoder(one_hot_input, target_vals_ss)
+            if self.focus is not None:
+                self.train_focused(
+                    one_hot_input=one_hot_input,
+                    input_ndx=input_ndx,
+                    target_vals_cl=target_vals_ss,
+                    input_keys=input_keys,
+                )
 
     @staticmethod
     def assert_input_type(input_vals):
