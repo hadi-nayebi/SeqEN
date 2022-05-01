@@ -2,6 +2,8 @@
 # coding: utf-8
 
 # by nayebiga@msu.edu
+from __future__ import annotations
+
 __version__ = "0.0.1"
 
 
@@ -52,26 +54,30 @@ class TrainSession:
         arch_path = self.arch_dir / f"{arch}.json"
         return Architecture(read_json(str(arch_path)))
 
-    def load_training_settings(self, training_settings=None) -> Dict:
+    def load_training_settings(self, training_settings=None) -> (None | Dict):
         if training_settings is not None:
+            if isinstance(training_settings, str):
+                training_settings = self.train_params_dir / f"{training_settings}.json"
             if isinstance(training_settings, Path):
-                training_settings = read_json(str(training_settings))
-            elif isinstance(training_settings, str):
-                training_settings_path = self.train_params_dir / f"{training_settings}.json"
-                training_settings = read_json(str(training_settings_path))
+                if training_settings.exists():
+                    training_settings = read_json(str(training_settings))
+                else:
+                    training_settings = None
             else:
                 raise TypeError("Train setting must be str or Path-like object")
         return training_settings
 
-    def load_modular_training_settings(self, modular_training_settings=None) -> Dict:
+    def load_modular_training_settings(self, modular_training_settings=None) -> (None | Dict):
         if modular_training_settings is not None:
-            if isinstance(modular_training_settings, Path):
-                modular_training_settings = read_json(str(modular_training_settings))
-            elif isinstance(modular_training_settings, str):
-                modular_training_settings_path = (
+            if isinstance(modular_training_settings, str):
+                modular_training_settings = (
                     self.train_params_dir / f"{modular_training_settings}.json"
                 )
-                modular_training_settings = read_json(str(modular_training_settings_path))
+            if isinstance(modular_training_settings, Path):
+                if modular_training_settings.exists():
+                    modular_training_settings = read_json(str(modular_training_settings))
+                else:
+                    modular_training_settings = None
             else:
                 raise TypeError("Train setting must be str or Path-like object")
         return modular_training_settings
