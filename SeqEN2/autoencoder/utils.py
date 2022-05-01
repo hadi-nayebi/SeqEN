@@ -4,7 +4,7 @@
 # by nayebiga@msu.edu
 __version__ = "0.0.1"
 
-
+from numpy import append, array, mean
 from torch import optim
 from torch.nn import (
     ELU,
@@ -147,3 +147,80 @@ def print_shapes(inputs, module, module_name):
         inputs = unit(inputs)
         print(name, inputs.shape)
     return inputs
+
+
+class FocusedLRScheduler:
+    def __init__(
+        self,
+        optimizer,
+        lr,
+        patience=1000,
+        factor=0.99,
+        min_lr=0.0001,
+        max_lr=0.01,
+        max_loss_change=0.1,
+        min_loss_change=0.01,
+    ):
+        self.optimizer = optimizer
+        self.patience = patience
+        self.factor = factor
+        self.min_lr = min_lr
+        self.max_lr = max_lr
+        self.max_loss_change = max_loss_change
+        self.min_loss_change = min_loss_change
+
+        self.loss_container = array([])
+        self.loss_change = 0.0
+        self.lr = array([lr])
+        self.wait = 0
+        self.waiting = False
+        self.direction = None
+        self.force = False
+
+    def step(self, loss):
+        # see if loss has changed significantly
+        if self.add_new_loss(loss):
+            if self.loss_change < self.max_loss_change:
+                self.direction = "up"
+            else:
+                self.direction = "down"
+                self.force = True
+        self.update_waiting()
+        if self.force or self.update_lr():
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = self.get_last_lr()
+            self.force = False
+
+    def update_lr(self):
+        if not self.waiting and self.direction is not None:
+            new_lr = self.lr[-1]
+            if self.direction == "up":
+                new_lr = self.lr[-1] * (1 + (1 - self.factor))
+            elif self.direction == "down":
+                new_lr = self.lr[-1] * self.factor
+            new_lr = max(min(new_lr, self.max_lr), self.min_lr)
+            self.lr = append(self.lr, new_lr)
+            if self.lr.shape[0] > 10:
+                self.lr = self.lr[-10:]
+            self.waiting = True
+            return True
+        return False
+
+    def get_last_lr(self):
+        return self.lr[-1]
+
+    def update_waiting(self):
+        if self.waiting:
+            self.wait += 1
+            if self.wait == self.patience:
+                self.wait = 0
+                self.waiting = False
+
+    def add_new_loss(self, loss):
+        self.loss_container = append(self.loss_container, loss)
+        if self.loss_container.shape[0] > self.patience:
+            self.loss_container = self.loss_container[-self.patience :]
+            loss_mean = mean(self.loss_container)
+            self.loss_change = (loss - loss_mean) / loss_mean
+            return True
+        return False
