@@ -149,4 +149,4 @@ class ModularTrainingParams(NoneRefersDefault):
 @dataclass_json(undefined=Undefined.RAISE)
 @nested_deco
 class ModularTrainingSettings(NoneRefersDefault):
-    focused: TrainingParams = DefaultVal(ModularTrainingParams()).val
+    focused: ModularTrainingParams = DefaultVal(ModularTrainingParams()).val
