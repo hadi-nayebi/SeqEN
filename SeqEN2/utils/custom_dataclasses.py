@@ -141,7 +141,7 @@ class ModularTrainingParams(NoneRefersDefault):
     factor: float = DefaultVal(0.99)
     patience: float = DefaultVal(1000)
     min_lr: float = DefaultVal(0.0001)
-    max_lr: float = DefaultVal(0.01)
+    max_lr: float = DefaultVal(0.001)
     max_loss_change: float = DefaultVal(0.1)
     min_loss_change: float = DefaultVal(0.01)
 
