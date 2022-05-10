@@ -145,3 +145,16 @@ class TestSessionArgParser(DefaultParser):
         )
         self.parser.add_argument("-prids", "--protein_ids", type=str, help="Pr IDs")
         self.parser.add_argument("-t", "--text", type=str, help="Text")
+        self.parser.add_argument("-an", "--analysis", type=str, help="Analysis")
+
+
+class JobFilesGenArgParser(DefaultParser):
+    """Set description, options, and flags for TestSession."""
+
+    def __init__(self) -> None:
+        """Define instance variables, collect arguments."""
+        super().__init__("create jobs for HPCC")
+
+    def _initialize(self) -> None:
+        self.parser.add_argument("-u", "--update", type=str, help="Update")
+        self.parser.add_argument("-v", "--value", type=str, help="Value")
