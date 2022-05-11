@@ -20,6 +20,9 @@ from SeqEN2.utils.utils import set_random_seed
 
 
 class TrainSession:
+    """
+    TrainSession
+    """
 
     root = Path(dirname(__file__)).parent.parent
 
@@ -42,10 +45,10 @@ class TrainSession:
         # model placeholder
         self.model = None
 
-    def add_model(self, name, arch, d1=8, dn=10, w=20):
+    def add_model(self, name, arch):
         arch = self.load_arch(arch)
         if self.model is None:
-            self.model = Model(name, arch, d1=d1, dn=dn, w=w)
+            self.model = Model(name, arch)
 
     def load_data(self, key, dataset_name):
         self.model.load_data(key, dataset_name)
@@ -135,13 +138,7 @@ def main(args):
     # session
     set_random_seed(args["Random Seed"])
     train_session = TrainSession(is_testing=args["Is Testing"])
-    train_session.add_model(
-        args["Model Name"],
-        args["Arch"],
-        d1=args["D1"],
-        dn=args["Dn"],
-        w=args["W"],
-    )
+    train_session.add_model(args["Model Name"], args["Arch"])
     train_session.model.random_seed = args["Random Seed"]
     # load datafiles
     mvid = None
