@@ -1,0 +1,81 @@
+{
+    "name": "arch83",
+    "type": "AECSS",
+    "vectorizer": [
+        {"type": "Linear", "in": 21, "out": 8, "init": "xavier"},       // out : d1
+        {"type": "Tanh"}
+    ],
+    "encoder":[
+        {"type": "Flatten"},
+        {"type": "Linear", "in": 80, "out": 1024, "init": "xavier"},    // in : w * d1
+        {"type": "Tanh"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
+        {"type": "Tanh"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
+        {"type": "Tanh"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
+        {"type": "Tanh"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
+        {"type": "Tanh"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
+        {"type": "Tanh"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
+        {"type": "Tanh"},
+        {"type": "Linear", "in": 1024, "out": 3, "init": "xavier"},     // out : dn
+        {"type": "Tanh"}
+    ],
+    "decoder": [
+        {"type": "Linear", "in": 3, "out": 1024, "init": "he"},         // in : dn
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 80, "init": "he"},        // out : w * d1
+        {"type": "ReLU"},
+        {"type": "Unflatten", "in": 8, "out": 10}                       // out : w, in : d1
+    ],
+    "ss_decoder": [
+        {"type": "Linear", "in": 3, "out": 1024, "init": "he"},         // in : dn
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 256, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Unflatten", "in": 32, "out": 8},
+        {"type": "ConvTranspose1d", "in": 32, "out": 64, "kernel": 2, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "ConvTranspose1d", "in": 64, "out": 9, "kernel": 2, "init": "xavier"},
+        {"type": "LogSoftmax"}
+    ],
+    "classifier": [
+        {"type": "Linear", "in": 3, "out": 1024, "init": "he"},         // in : dn
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
+        {"type": "ReLU"},
+        {"type": "Linear", "in": 1024, "out": 2, "init": "xavier"},
+        {"type": "Softmax"}
+    ],
+    "devectorizer": [
+        {"type": "Linear", "in": 8, "out": 21, "init": "xavier"},       // in : d1
+        {"type": "LogSoftmax"}
+    ]
+}
