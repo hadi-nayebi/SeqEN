@@ -7,7 +7,7 @@
     ],
     "encoder":[
         {"type": "Flatten"},
-        {"type": "Linear", "in": 120, "out": 1024, "init": "xavier"},
+        {"type": "Linear", "in": 160, "out": 1024, "init": "xavier"},
         {"type": "Tanh"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
         {"type": "Tanh"},
@@ -21,11 +21,11 @@
         {"type": "Tanh"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
         {"type": "Tanh"},
-        {"type": "Linear", "in": 1024, "out": 5, "init": "xavier"},
+        {"type": "Linear", "in": 1024, "out": 3, "init": "xavier"},
         {"type": "Tanh"}
     ],
     "decoder": [
-        {"type": "Linear", "in": 5, "out": 1024, "init": "he"},
+        {"type": "Linear", "in": 3, "out": 1024, "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
         {"type": "ReLU"},
@@ -39,12 +39,12 @@
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
         {"type": "ReLU"},
-        {"type": "Linear", "in": 1024, "out": 120, "init": "he"},
+        {"type": "Linear", "in": 1024, "out": 160, "init": "he"},
         {"type": "ReLU"},
-        {"type": "Unflatten", "in": 8, "out": 15}
+        {"type": "Unflatten", "in": 8, "out": 20}
     ],
     "ss_decoder": [
-        {"type": "Linear", "in": 5, "out": 1024, "init": "he"},
+        {"type": "Linear", "in": 3, "out": 1024, "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
         {"type": "ReLU"},
@@ -55,13 +55,13 @@
         {"type": "Linear", "in": 1024, "out": 256, "init": "he"},
         {"type": "ReLU"},
         {"type": "Unflatten", "in": 32, "out": 8},
-        {"type": "ConvTranspose1d", "in": 32, "out": 64, "kernel": 5, "init": "he"},
+        {"type": "ConvTranspose1d", "in": 32, "out": 64, "kernel": 6, "init": "he"},
         {"type": "ReLU"},
-        {"type": "ConvTranspose1d", "in": 64, "out": 9, "kernel": 4, "init": "xavier"},
+        {"type": "ConvTranspose1d", "in": 64, "out": 9, "kernel": 8, "init": "xavier"},
         {"type": "LogSoftmax"}
     ],
     "classifier": [
-        {"type": "Linear", "in": 5, "out": 1024, "init": "he"},
+        {"type": "Linear", "in": 3, "out": 1024, "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
         {"type": "ReLU"},
