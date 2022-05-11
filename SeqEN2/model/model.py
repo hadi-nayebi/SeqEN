@@ -44,14 +44,14 @@ class Model:
 
     root = Path(dirname(__file__)).parent.parent
 
-    def __init__(self, name, arch, d1=8, dn=10, w=20):
+    def __init__(self, name, arch):
         self.name = name
         self.path = self.root / "models" / f"{self.name}"
         self.versions_path = self.path / "versions"
         self.results = self.path / "results"
-        self.d1 = d1
-        self.dn = dn
-        self.w = w
+        self.d1 = None
+        self.dn = None
+        self.w = None
         self.device = device("cuda" if cuda.is_available() else "cpu")
         self.autoencoder = None
         self.build_model(arch)
@@ -80,6 +80,19 @@ class Model:
             self.results.mkdir()
 
     def build_model(self, arch):
+        self.d1 = arch.vectorizer[0]["out"]
+        assert self.d1 == arch.devectorizer[0]["in"], "mismatch in d1 from arch json"
+        assert self.d1 == arch.decoder[-1]["in"], "mismatch in d1 from arch json"
+
+        self.dn = arch.encoder[-2]["out"]
+        assert self.dn == arch.decoder[0]["in"], "mismatch in dn from arch json"
+        assert self.dn == arch.ss_decoder[0]["in"], "mismatch in dn from arch json"
+        assert self.dn == arch.classifier[0]["in"], "mismatch in dn from arch json"
+
+        self.w = arch.decoder[-1]["out"]
+        assert self.w * self.d1 == arch.decoder[-3]["out"], "mismatch in w, d1 from arch json"
+        assert self.w * self.d1 == arch.encoder[1]["in"], "mismatch in w, d1 from arch json"
+
         if arch.type == "AE":
             self.autoencoder = Autoencoder(self.d1, self.dn, self.w, arch)
         elif arch.type == "AAE":
