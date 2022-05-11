@@ -56,12 +56,12 @@ class TestSession:
         # attrs
         self.smooth_embed = False
 
-    def add_model(self, name, arch, version, model_id, d1=8, dn=10, w=20):
+    def add_model(self, name, arch, version, model_id):
         arch = self.load_arch(arch)
         self.version = version
         self.model_id = model_id
         if self.model is None:
-            self.model = Model(name, arch, d1=d1, dn=dn, w=w)
+            self.model = Model(name, arch)
             self.model.load_model(version, model_id)
         self.result_dir = self.models_dir / self.model.name / "results" / self.version
         if not self.result_dir.exists():
@@ -325,13 +325,7 @@ def main(args):
     # session
     test_session = TestSession()
     test_session.add_model(
-        args["Model Name"],
-        args["Arch"],
-        args["Model Version"],
-        args["Model ID"],
-        d1=args["D1"],
-        dn=args["Dn"],
-        w=args["W"],
+        args["Model Name"], args["Arch"], args["Model Version"], args["Model ID"]
     )
     test_session.model.embed_only = args["Embed Only"]
     test_session.smooth_embed = args["Smooth Embed"]
