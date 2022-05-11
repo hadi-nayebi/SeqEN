@@ -56,10 +56,6 @@ class TrainSessionArgParser(DefaultParser):
         )
         # architecture blueprint
         self.parser.add_argument("-a", "--arch", type=str, help="Arch", required=True)
-        # madel hyper params, d1: amino acids vec, dn: embedding, w: sliding window
-        self.parser.add_argument("-d1", "--d1", type=int, help="D1", default=8)
-        self.parser.add_argument("-dn", "--dn", type=int, help="Dn", default=10)
-        self.parser.add_argument("-w", "--w", type=int, help="W", default=20)
         self.parser.add_argument("-e", "--epochs", type=int, help="Epochs", default=25)
         self.parser.add_argument("-trb", "--train_batch", type=int, help="Train Batch", default=128)
         self.parser.add_argument("-teb", "--test_batch", type=int, help="Test Batch", default=1)
@@ -125,10 +121,6 @@ class TestSessionArgParser(DefaultParser):
         )
         # architecture blueprint
         self.parser.add_argument("-a", "--arch", type=str, help="Arch", required=True)
-        # madel hyper params, d1: amino acids vec, dn: embedding, w: sliding window
-        self.parser.add_argument("-d1", "--d1", type=int, help="D1", default=8)
-        self.parser.add_argument("-dn", "--dn", type=int, help="Dn", default=10)
-        self.parser.add_argument("-w", "--w", type=int, help="W", default=20)
         self.parser.add_argument("-teb", "--test_batch", type=int, help="Test Batch", default=1)
         self.parser.add_argument(
             "-v", "--verbose", help="Verbose", action="store_true", default=False
