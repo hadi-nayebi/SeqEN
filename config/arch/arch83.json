@@ -39,7 +39,7 @@
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
         {"type": "ReLU"},
-        {"type": "Linear", "in": 1024, "out": 80, "init": "he"},
+        {"type": "Linear", "in": 1024, "out": 120, "init": "he"},
         {"type": "ReLU"},
         {"type": "Unflatten", "in": 8, "out": 15}
     ],
