@@ -21,17 +21,13 @@
         {"type": "Tanh"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
         {"type": "Tanh"},
-        {"type": "Linear", "in": 1024, "out": 1024, "init": "xavier"},
-        {"type": "Tanh"},
-        {"type": "Linear", "in": 1024, "out": 10, "init": "xavier"},
+        {"type": "Linear", "in": 1024, "out": 5, "init": "xavier"},
         {"type": "Tanh"}
     ],
     "decoder": [
-        {"type": "Linear", "in": 10, "out": 1024, "init": "he"},
+        {"type": "Linear", "in": 5, "out": 1024, "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
-        {"type": "ReLU"},
-        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
         {"type": "ReLU"},
@@ -48,9 +44,7 @@
         {"type": "Unflatten", "in": 8, "out": 20}
     ],
     "ss_decoder": [
-        {"type": "Linear", "in": 10, "out": 1024, "init": "he"},
-        {"type": "ReLU"},
-        {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
+        {"type": "Linear", "in": 5, "out": 1024, "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
         {"type": "ReLU"},
@@ -67,11 +61,9 @@
         {"type": "LogSoftmax"}
     ],
     "classifier": [
-        {"type": "Linear", "in": 10, "out": 1024, "init": "he"},
+        {"type": "Linear", "in": 5, "out": 1024, "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024, "init": "he"},
-        {"type": "ReLU"},
-        {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
         {"type": "ReLU"},
         {"type": "Linear", "in": 1024, "out": 1024,  "init": "he"},
         {"type": "ReLU"},
