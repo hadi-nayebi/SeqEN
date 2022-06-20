@@ -88,8 +88,6 @@ class AutoencoderClassifierSSDecoder(AutoencoderClassifier, AutoencoderSSDecoder
                 input_vals, device, input_noise=input_noise, input_keys=input_keys
             )
             self.train_reconstructor(one_hot_input, input_ndx)
-            # train for continuity
-            self.train_continuity(one_hot_input)
             if "C" in input_keys:
                 self.train_classifier(one_hot_input, target_vals_cl)
             if "S" in input_keys:

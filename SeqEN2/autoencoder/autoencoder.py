@@ -308,32 +308,20 @@ class Autoencoder(Module):
         self.reconstructor_optimizer.zero_grad()
         reconstructor_output = self.forward_encoder_decoder(one_hot_input)
         reconstructor_loss = self.criterion_NLLLoss(reconstructor_output, input_ndx.reshape((-1,)))
-        reconstructor_loss.backward()
+        continuity_loss_r = self.criterion_NLLLoss(
+            reconstructor_output, continuity_target_right(input_ndx.reshape((-1,)))
+        )
+        continuity_loss_l = self.criterion_NLLLoss(
+            reconstructor_output, continuity_target_left(input_ndx.reshape((-1,)))
+        )
+        loss = reconstructor_loss + continuity_loss_r + continuity_loss_l
+        loss.backward()
         self.clip_reconstructor_gradients()
         self.reconstructor_optimizer.step()
-        self.log("reconstructor_loss", reconstructor_loss.item())
+        self.log("reconstructor_loss", loss.item())
         self.log("reconstructor_LR", self.reconstructor_lr_scheduler.get_last_lr())
         self._training_settings.reconstructor.lr = self.reconstructor_lr_scheduler.get_last_lr()
-        self.reconstructor_lr_scheduler.step(reconstructor_loss.item())
-
-    def train_continuity(self, one_hot_input):
-        if not self.ignore_continuity:
-            self.continuity_optimizer.zero_grad()
-            encoded_output = self.forward_embed(one_hot_input)
-            continuity_loss_r = self.criterion_MSELoss(
-                encoded_output, continuity_target_right(encoded_output)
-            )
-            continuity_loss_l = self.criterion_MSELoss(
-                encoded_output, continuity_target_left(encoded_output)
-            )
-            continuity_loss = continuity_loss_r + continuity_loss_l
-            continuity_loss.backward()
-            self.clip_continuity_gradients()
-            self.continuity_optimizer.step()
-            self.log("continuity_loss", continuity_loss.item())
-            self.log("continuity_LR", self.continuity_lr_scheduler.get_last_lr())
-            self._training_settings.continuity.lr = self.continuity_lr_scheduler.get_last_lr()
-            self.continuity_lr_scheduler.step(continuity_loss.item())
+        self.reconstructor_lr_scheduler.step(loss.item())
 
     def train_focused(self, **kwargs):
         self.focused_optimizer.zero_grad()
@@ -360,8 +348,6 @@ class Autoencoder(Module):
                 input_vals, device, input_noise=input_noise, input_keys=input_keys
             )
             self.train_reconstructor(one_hot_input, input_ndx)
-            # train for continuity
-            self.train_continuity(one_hot_input)
             if self.focus is not None:
                 self.train_focused(one_hot_input=one_hot_input, input_ndx=input_ndx)
 
