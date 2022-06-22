@@ -165,13 +165,14 @@ def main(args):
             / parsed_mvid[0]
             / "training_settings.json"
         )
+        name = "" if args["Focus"] is None else args["Focus"] + "_"
         modular_training_settings = (
             train_session.root
             / "models"
             / name
             / "versions"
             / parsed_mvid[0]
-            / "modular_training_settings.json"
+            / f"{name}_modular_training_settings.json"
         )
     if args["Overfitting"]:
         train_session.overfit_tests(

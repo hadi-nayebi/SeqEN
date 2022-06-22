@@ -113,11 +113,18 @@ class Autoencoder(Module):
             str(train_dir / "training_settings.json"),
         )
 
+    def read_training_settings(self, path):
+        self.training_settings = read_json(path)
+
     def save_modular_training_settings(self, train_dir):
+        name = "" if self.focus is None else f"{self.focus}_"
         write_json(
             self.modular_training_settings.to_dict(),
-            str(train_dir / "modular_training_settings.json"),
+            str(train_dir / f"{name}modular_training_settings.json"),
         )
+
+    def read_modular_training_settings(self, path):
+        self.modular_training_settings = read_json(path)
 
     def update_training_settings(self, train_dir):
         new_training_setting_path = train_dir / "update_training_settings.json"
